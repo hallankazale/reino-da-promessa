@@ -1,37 +1,37 @@
 ; Engine configuration file.
-; Reino da Promessa - prototipo 3D leve
-config_version=5
+; Reino da Promessa - prototipo 3D leve para Godot 3.6
+config_version=4
 
 [application]
 config/name="Reino da Promessa"
 run/main_scene="res://scenes/world/main.tscn"
 
 [display]
-window/size/viewport_width=1280
-window/size/viewport_height=720
-window/size/window_width_override=960
-window/size/window_height_override=540
-window/stretch/mode="canvas_items"
+window/size/width=960
+window/size/height=540
+window/stretch/mode="2d"
+window/stretch/aspect="keep"
 
 [rendering]
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
-textures/default_filters/use_nearest_mipmap_filter=false
+quality/driver/driver_name="GLES2"
+quality/shadows/filter_mode=0
+quality/reflections/high_quality_ggx=false
+quality/filters/use_nearest_mipmap_filter=false
 
 [input]
 move_forward={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"physical_keycode":87)]
+"events": [ Object(InputEventKey,"scancode":87) ]
 }
 move_back={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"physical_keycode":83)]
+"events": [ Object(InputEventKey,"scancode":83) ]
 }
 move_left={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"physical_keycode":65)]
+"events": [ Object(InputEventKey,"scancode":65) ]
 }
 move_right={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"physical_keycode":68)]
+"events": [ Object(InputEventKey,"scancode":68) ]
 }
