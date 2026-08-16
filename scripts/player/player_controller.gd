@@ -1,22 +1,29 @@
-extends CharacterBody3D
+extends KinematicBody
 
-@export var move_speed: float = 4.5
-@export var acceleration: float = 12.0
-@export var gravity_force: float = 18.0
+export var move_speed = 4.5
+export var acceleration = 12.0
+export var gravity_force = 18.0
 
-func _physics_process(delta: float) -> void:
-    var input_vector := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-    var desired_direction := Vector3(input_vector.x, 0.0, input_vector.y).normalized()
+var velocity = Vector3.ZERO
 
+func _physics_process(delta):
+    var input_vector = Vector2(
+        Input.get_action_strength("move_right") - Input.get_action_strength("move_left"),
+        Input.get_action_strength("move_back") - Input.get_action_strength("move_forward")
+    )
+    if input_vector.length() > 1.0:
+        input_vector = input_vector.normalized()
+
+    var desired_direction = Vector3(input_vector.x, 0.0, input_vector.y)
     velocity.x = move_toward(velocity.x, desired_direction.x * move_speed, acceleration * delta)
     velocity.z = move_toward(velocity.z, desired_direction.z * move_speed, acceleration * delta)
 
-    if not is_on_floor():
-        velocity.y -= gravity_force * delta
-    else:
+    if is_on_floor():
         velocity.y = 0.0
+    else:
+        velocity.y -= gravity_force * delta
 
     if desired_direction.length_squared() > 0.001:
-        look_at(global_position + desired_direction, Vector3.UP)
+        look_at(global_transform.origin + desired_direction, Vector3.UP)
 
-    move_and_slide()
+    velocity = move_and_slide(velocity, Vector3.UP)
