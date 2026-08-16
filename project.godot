@@ -35,3 +35,7 @@ move_right={
 "deadzone": 0.5,
 "events": [ Object(InputEventKey,"scancode":68) ]
 }
+attack={
+"deadzone": 0.5,
+"events": [ Object(InputEventKey,"scancode":32) ]
+}
