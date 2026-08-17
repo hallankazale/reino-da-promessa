@@ -1,7 +1,7 @@
 extends CanvasLayer
 
-onready var player = get_node("../Player")
-onready var stats_label = $MarginContainer/StatsLabel
+@onready var player = get_node("../Player")
+@onready var stats_label = $MarginContainer/StatsLabel
 
 func _process(_delta):
     if player == null:
