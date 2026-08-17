@@ -1,41 +1,56 @@
 ; Engine configuration file.
-; Reino da Promessa - prototipo 3D leve para Godot 3.6
-config_version=4
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
 
 [application]
+
 config/name="Reino da Promessa"
 run/main_scene="res://scenes/world/main.tscn"
+config/features=PackedStringArray("4.7")
 
 [display]
-window/size/width=960
-window/size/height=540
+
+window/size/viewport_width=960
+window/size/viewport_height=540
 window/stretch/mode="2d"
-window/stretch/aspect="keep"
+
+[input]
+
+move_forward={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":87,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+move_back={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":83,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+move_left={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":65,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+move_right={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":68,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+attack={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":32,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
 
 [rendering]
+
 quality/driver/driver_name="GLES2"
 quality/shadows/filter_mode=0
 quality/reflections/high_quality_ggx=false
 quality/filters/use_nearest_mipmap_filter=false
-
-[input]
-move_forward={
-"deadzone": 0.5,
-"events": [ Object(InputEventKey,"scancode":87) ]
-}
-move_back={
-"deadzone": 0.5,
-"events": [ Object(InputEventKey,"scancode":83) ]
-}
-move_left={
-"deadzone": 0.5,
-"events": [ Object(InputEventKey,"scancode":65) ]
-}
-move_right={
-"deadzone": 0.5,
-"events": [ Object(InputEventKey,"scancode":68) ]
-}
-attack={
-"deadzone": 0.5,
-"events": [ Object(InputEventKey,"scancode":32) ]
-}

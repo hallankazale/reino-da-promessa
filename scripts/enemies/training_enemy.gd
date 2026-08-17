@@ -1,7 +1,7 @@
-extends Spatial
+extends Node3D
 
-export var max_health = 30
-export var xp_reward = 10
+@export var max_health = 30
+@export var xp_reward = 10
 
 var current_health = 0
 
