@@ -1,7 +1,8 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera/mmorpg_camera.gd" id="2_camera"]
+[ext_resource type="Script" path="res://scripts/player/humanoid_animator.gd" id="3_animator"]
 
 [sub_resource type="CapsuleShape3D" id="PlayerCollision"]
 radius = 0.42
@@ -51,6 +52,7 @@ script = ExtResource("1_player")
 shape = SubResource("PlayerCollision")
 
 [node name="Visual" type="Node3D" parent="."]
+script = ExtResource("3_animator")
 
 [node name="Torso" type="MeshInstance3D" parent="Visual"]
 position = Vector3(0, 0.45, 0)
