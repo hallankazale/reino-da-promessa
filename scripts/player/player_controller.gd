@@ -3,6 +3,7 @@ extends CharacterBody3D
 @export var move_speed = 4.5
 @export var acceleration = 12.0
 @export var gravity_force = 18.0
+@export var turn_speed = 10.0
 @export var attack_damage = 10
 @export var attack_range = 2.2
 @export var target_search_range = 12.0
@@ -32,7 +33,7 @@ func _handle_movement(delta):
 	if input_vector.length() > 1.0:
 		input_vector = input_vector.normalized()
 
-	var desired_direction = Vector3(input_vector.x, 0.0, input_vector.y)
+	var desired_direction = _camera_relative_direction(input_vector)
 	velocity.x = move_toward(velocity.x, desired_direction.x * move_speed, acceleration * delta)
 	velocity.z = move_toward(velocity.z, desired_direction.z * move_speed, acceleration * delta)
 
@@ -42,9 +43,28 @@ func _handle_movement(delta):
 		velocity.y -= gravity_force * delta
 
 	if desired_direction.length_squared() > 0.001:
-		look_at(global_position + desired_direction, Vector3.UP)
+		var target_angle = atan2(desired_direction.x, desired_direction.z)
+		rotation.y = lerp_angle(rotation.y, target_angle, min(turn_speed * delta, 1.0))
 
 	move_and_slide()
+
+func _camera_relative_direction(input_vector: Vector2) -> Vector3:
+	if input_vector == Vector2.ZERO:
+		return Vector3.ZERO
+
+	var camera = get_viewport().get_camera_3d()
+	if camera == null:
+		return Vector3(input_vector.x, 0.0, input_vector.y).normalized()
+
+	var forward = -camera.global_transform.basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+
+	var right = camera.global_transform.basis.x
+	right.y = 0.0
+	right = right.normalized()
+
+	return (right * input_vector.x + forward * -input_vector.y).normalized()
 
 func _select_nearest_target():
 	_clear_target()
