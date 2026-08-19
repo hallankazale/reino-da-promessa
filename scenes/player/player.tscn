@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=24 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera/mmorpg_camera.gd" id="2_camera"]
@@ -12,38 +12,86 @@ height = 1.8
 albedo_color = Color(0.68, 0.43, 0.27, 1)
 roughness = 0.9
 
-[sub_resource type="StandardMaterial3D" id="TunicMaterial"]
-albedo_color = Color(0.17, 0.28, 0.38, 1)
-roughness = 0.95
+[sub_resource type="StandardMaterial3D" id="IvoryMaterial"]
+albedo_color = Color(0.78, 0.72, 0.58, 1)
+roughness = 0.82
 
-[sub_resource type="StandardMaterial3D" id="ClothMaterial"]
-albedo_color = Color(0.72, 0.61, 0.42, 1)
-roughness = 1.0
+[sub_resource type="StandardMaterial3D" id="DarkLeatherMaterial"]
+albedo_color = Color(0.12, 0.065, 0.035, 1)
+roughness = 0.88
 
-[sub_resource type="StandardMaterial3D" id="LeatherMaterial"]
-albedo_color = Color(0.2, 0.105, 0.055, 1)
+[sub_resource type="StandardMaterial3D" id="BronzeMaterial"]
+albedo_color = Color(0.34, 0.2, 0.07, 1)
+metallic = 0.7
+roughness = 0.36
+
+[sub_resource type="StandardMaterial3D" id="GoldMaterial"]
+albedo_color = Color(0.72, 0.46, 0.11, 1)
+metallic = 0.78
+roughness = 0.28
+
+[sub_resource type="StandardMaterial3D" id="SteelMaterial"]
+albedo_color = Color(0.52, 0.56, 0.6, 1)
+metallic = 0.9
+roughness = 0.22
+
+[sub_resource type="StandardMaterial3D" id="CapeMaterial"]
+albedo_color = Color(0.86, 0.82, 0.7, 1)
 roughness = 1.0
 
 [sub_resource type="SphereMesh" id="HeadMesh"]
 radius = 0.24
 height = 0.48
-radial_segments = 16
-rings = 8
+radial_segments = 20
+rings = 10
 
 [sub_resource type="BoxMesh" id="TorsoMesh"]
 size = Vector3(0.72, 0.78, 0.34)
 
+[sub_resource type="BoxMesh" id="ArmorChestMesh"]
+size = Vector3(0.78, 0.62, 0.42)
+
 [sub_resource type="BoxMesh" id="WaistClothMesh"]
-size = Vector3(0.78, 0.5, 0.38)
+size = Vector3(0.8, 0.52, 0.38)
 
 [sub_resource type="CapsuleMesh" id="LimbMesh"]
 radius = 0.1
 height = 0.62
-radial_segments = 10
-rings = 4
+radial_segments = 12
+rings = 5
 
 [sub_resource type="BoxMesh" id="FootMesh"]
 size = Vector3(0.22, 0.12, 0.38)
+
+[sub_resource type="SphereMesh" id="ShoulderMesh"]
+radius = 0.18
+height = 0.18
+radial_segments = 14
+rings = 6
+
+[sub_resource type="BoxMesh" id="CapeMesh"]
+size = Vector3(0.76, 1.45, 0.06)
+
+[sub_resource type="BoxMesh" id="SwordBladeMesh"]
+size = Vector3(0.075, 0.92, 0.035)
+
+[sub_resource type="BoxMesh" id="SwordGuardMesh"]
+size = Vector3(0.34, 0.055, 0.07)
+
+[sub_resource type="CylinderMesh" id="SwordGripMesh"]
+top_radius = 0.045
+bottom_radius = 0.045
+height = 0.28
+radial_segments = 10
+
+[sub_resource type="BoxMesh" id="ShieldMesh"]
+size = Vector3(0.5, 0.72, 0.1)
+
+[sub_resource type="BoxMesh" id="ShieldBossMesh"]
+size = Vector3(0.18, 0.18, 0.14)
+
+[sub_resource type="BoxMesh" id="BeltMesh"]
+size = Vector3(0.84, 0.12, 0.4)
 
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_player")
@@ -54,52 +102,119 @@ shape = SubResource("PlayerCollision")
 [node name="Visual" type="Node3D" parent="."]
 script = ExtResource("3_animator")
 
+[node name="Cape" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, 0.15, 0.2)
+rotation_degrees = Vector3(-4, 0, 0)
+mesh = SubResource("CapeMesh")
+material_override = SubResource("CapeMaterial")
+
 [node name="Torso" type="MeshInstance3D" parent="Visual"]
 position = Vector3(0, 0.45, 0)
 mesh = SubResource("TorsoMesh")
-material_override = SubResource("TunicMaterial")
+material_override = SubResource("IvoryMaterial")
+
+[node name="ChestArmor" type="MeshInstance3D" parent="Visual/Torso"]
+position = Vector3(0, 0.02, -0.05)
+mesh = SubResource("ArmorChestMesh")
+material_override = SubResource("BronzeMaterial")
+
+[node name="Belt" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, 0.02, 0)
+mesh = SubResource("BeltMesh")
+material_override = SubResource("DarkLeatherMaterial")
 
 [node name="WaistCloth" type="MeshInstance3D" parent="Visual"]
-position = Vector3(0, -0.16, 0)
+position = Vector3(0, -0.18, 0)
 mesh = SubResource("WaistClothMesh")
-material_override = SubResource("ClothMaterial")
+material_override = SubResource("IvoryMaterial")
 
 [node name="Head" type="MeshInstance3D" parent="Visual"]
 position = Vector3(0, 1.08, 0)
 mesh = SubResource("HeadMesh")
 material_override = SubResource("SkinMaterial")
 
+[node name="LeftShoulder" type="MeshInstance3D" parent="Visual"]
+position = Vector3(-0.48, 0.72, 0)
+scale = Vector3(1.35, 0.7, 1.0)
+mesh = SubResource("ShoulderMesh")
+material_override = SubResource("GoldMaterial")
+
+[node name="RightShoulder" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0.48, 0.72, 0)
+scale = Vector3(1.35, 0.7, 1.0)
+mesh = SubResource("ShoulderMesh")
+material_override = SubResource("GoldMaterial")
+
 [node name="LeftArm" type="MeshInstance3D" parent="Visual"]
 position = Vector3(-0.48, 0.39, 0)
 rotation_degrees = Vector3(0, 0, -8)
 mesh = SubResource("LimbMesh")
-material_override = SubResource("SkinMaterial")
+material_override = SubResource("DarkLeatherMaterial")
+
+[node name="LeftBracer" type="MeshInstance3D" parent="Visual/LeftArm"]
+position = Vector3(0, -0.18, 0)
+scale = Vector3(1.28, 0.52, 1.28)
+mesh = SubResource("LimbMesh")
+material_override = SubResource("BronzeMaterial")
+
+[node name="Shield" type="MeshInstance3D" parent="Visual/LeftArm"]
+position = Vector3(-0.22, -0.1, -0.08)
+rotation_degrees = Vector3(0, 18, -8)
+mesh = SubResource("ShieldMesh")
+material_override = SubResource("DarkLeatherMaterial")
+
+[node name="ShieldBoss" type="MeshInstance3D" parent="Visual/LeftArm/Shield"]
+position = Vector3(0, 0, -0.09)
+mesh = SubResource("ShieldBossMesh")
+material_override = SubResource("GoldMaterial")
 
 [node name="RightArm" type="MeshInstance3D" parent="Visual"]
 position = Vector3(0.48, 0.39, 0)
 rotation_degrees = Vector3(0, 0, 8)
 mesh = SubResource("LimbMesh")
-material_override = SubResource("SkinMaterial")
+material_override = SubResource("DarkLeatherMaterial")
+
+[node name="RightBracer" type="MeshInstance3D" parent="Visual/RightArm"]
+position = Vector3(0, -0.18, 0)
+scale = Vector3(1.28, 0.52, 1.28)
+mesh = SubResource("LimbMesh")
+material_override = SubResource("BronzeMaterial")
+
+[node name="SwordGrip" type="MeshInstance3D" parent="Visual/RightArm"]
+position = Vector3(0, -0.36, 0)
+rotation_degrees = Vector3(0, 0, 0)
+mesh = SubResource("SwordGripMesh")
+material_override = SubResource("DarkLeatherMaterial")
+
+[node name="SwordGuard" type="MeshInstance3D" parent="Visual/RightArm/SwordGrip"]
+position = Vector3(0, -0.15, 0)
+mesh = SubResource("SwordGuardMesh")
+material_override = SubResource("GoldMaterial")
+
+[node name="SwordBlade" type="MeshInstance3D" parent="Visual/RightArm/SwordGrip"]
+position = Vector3(0, -0.63, 0)
+mesh = SubResource("SwordBladeMesh")
+material_override = SubResource("SteelMaterial")
 
 [node name="LeftLeg" type="MeshInstance3D" parent="Visual"]
 position = Vector3(-0.19, -0.58, 0)
 mesh = SubResource("LimbMesh")
-material_override = SubResource("LeatherMaterial")
+material_override = SubResource("DarkLeatherMaterial")
 
 [node name="RightLeg" type="MeshInstance3D" parent="Visual"]
 position = Vector3(0.19, -0.58, 0)
 mesh = SubResource("LimbMesh")
-material_override = SubResource("LeatherMaterial")
+material_override = SubResource("DarkLeatherMaterial")
 
 [node name="LeftFoot" type="MeshInstance3D" parent="Visual"]
 position = Vector3(-0.19, -0.9, -0.06)
 mesh = SubResource("FootMesh")
-material_override = SubResource("LeatherMaterial")
+material_override = SubResource("DarkLeatherMaterial")
 
 [node name="RightFoot" type="MeshInstance3D" parent="Visual"]
 position = Vector3(0.19, -0.9, -0.06)
 mesh = SubResource("FootMesh")
-material_override = SubResource("LeatherMaterial")
+material_override = SubResource("DarkLeatherMaterial")
 
 [node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("2_camera")
