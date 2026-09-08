@@ -2,6 +2,7 @@ extends CanvasLayer
 
 @onready var player: Node = get_node_or_null("../Player")
 @onready var quest_manager: Node = get_node_or_null("../QuestManager")
+@onready var region_label: Label = $MarginContainer/Panel/VBox/RegionLabel
 @onready var health_label: Label = $MarginContainer/Panel/VBox/HealthLabel
 @onready var health_bar: ProgressBar = $MarginContainer/Panel/VBox/HealthBar
 @onready var xp_label: Label = $MarginContainer/Panel/VBox/XPLabel
@@ -33,8 +34,14 @@ func _ready() -> void:
 		if quest_manager.has_signal("message_changed"):
 			quest_manager.message_changed.connect(_on_message_changed)
 
+	call_deferred("_connect_region_gates")
 	_sync_from_player()
 	_sync_quest()
+
+func _connect_region_gates() -> void:
+	for gate in get_tree().get_nodes_in_group("region_gates"):
+		if gate.has_signal("used") and not gate.used.is_connected(_on_region_changed):
+			gate.used.connect(_on_region_changed)
 
 func _sync_from_player() -> void:
 	_on_health_changed(player.current_health, player.max_health)
@@ -84,8 +91,13 @@ func _on_quest_changed(title: String, objective: String, progress: int, goal: in
 func _on_message_changed(message: String) -> void:
 	status_label.text = message
 
+func _on_region_changed(destination_name: String) -> void:
+	region_label.text = destination_name
+	target_label.text = "Alvo: -"
+
 func _on_player_died() -> void:
 	status_label.text = "Derrotado. Retornando ao acampamento..."
 
 func _on_player_respawned() -> void:
+	region_label.text = "Acampamento do Peregrino"
 	status_label.text = "De volta ao acampamento."
