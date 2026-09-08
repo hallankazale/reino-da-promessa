@@ -1,5 +1,8 @@
 extends SceneTree
 
+const LOOT_TABLE = preload("res://scripts/loot/loot_table.gd")
+const PICKUP_SCENE: PackedScene = preload("res://scenes/loot/world_pickup.tscn")
+
 var failures: Array[String] = []
 
 func _initialize() -> void:
@@ -12,6 +15,8 @@ func _run_tests() -> void:
 		"res://scenes/world/second_region.tscn",
 		"res://scenes/world/region_gate.tscn",
 		"res://scenes/ui/damage_popup.tscn",
+		"res://scenes/ui/inventory_panel.tscn",
+		"res://scenes/loot/world_pickup.tscn",
 		"res://scenes/player/player.tscn",
 		"res://scenes/enemies/enemy_base.tscn",
 		"res://scenes/npcs/eliabe.tscn",
@@ -23,7 +28,13 @@ func _run_tests() -> void:
 		"res://scripts/world/first_region_builder.gd",
 		"res://scripts/world/second_region_builder.gd",
 		"res://scripts/world/region_gate.gd",
+		"res://scripts/inventory/item_catalog.gd",
+		"res://scripts/inventory/inventory.gd",
+		"res://scripts/loot/loot_table.gd",
+		"res://scripts/loot/loot_manager.gd",
+		"res://scripts/loot/world_pickup.gd",
 		"res://scripts/ui/damage_popup.gd",
+		"res://scripts/ui/inventory_panel.gd",
 		"res://scripts/ui/hud.gd",
 		"res://assets/third_party/quaternius/pilgrim_guardian.glb",
 		"res://assets/third_party/quaternius/wasteland_specter.glb",
@@ -34,7 +45,7 @@ func _run_tests() -> void:
 	for path in required_resources:
 		_check_resource(path)
 
-	for action in ["move_forward", "move_back", "move_left", "move_right", "target_next", "attack", "interact"]:
+	for action in ["move_forward", "move_back", "move_left", "move_right", "target_next", "attack", "interact", "inventory"]:
 		if not InputMap.has_action(action):
 			failures.append("Input ausente: %s" % action)
 
@@ -46,12 +57,14 @@ func _run_tests() -> void:
 	var main_instance := main_scene.instantiate()
 	root.add_child(main_instance)
 
-	# Permite que _ready, builders procedurais e chamadas deferred terminem.
 	await process_frame
 	await process_frame
 	await process_frame
 
 	var player := main_instance.get_node_or_null("Player")
+	var inventory := main_instance.get_node_or_null("Player/Inventory")
+	var loot_manager := main_instance.get_node_or_null("LootManager")
+	var inventory_panel := main_instance.get_node_or_null("InventoryPanel")
 	var quest_manager := main_instance.get_node_or_null("QuestManager")
 	var eliabe := main_instance.get_node_or_null("Eliabe")
 	var first_region := main_instance.get_node_or_null("FirstRegion")
@@ -65,6 +78,14 @@ func _run_tests() -> void:
 
 	if player == null:
 		failures.append("Player nao foi instanciado")
+	if inventory == null:
+		failures.append("Player nao possui Inventory")
+	if loot_manager == null:
+		failures.append("LootManager nao foi instanciado")
+	if inventory_panel == null:
+		failures.append("InventoryPanel nao foi instanciado")
+	elif inventory_panel.get_node_or_null("Panel") == null:
+		failures.append("InventoryPanel nao possui painel visual")
 	if quest_manager == null:
 		failures.append("QuestManager nao foi instanciado")
 	if eliabe == null:
@@ -94,6 +115,13 @@ func _run_tests() -> void:
 
 	for enemy in enemies:
 		_validate_visual_adapter(enemy, enemy.get_display_name() if enemy.has_method("get_display_name") else enemy.name)
+		if not enemy.has_signal("loot_requested"):
+			failures.append("%s nao expoe loot_requested" % enemy.name)
+
+	if inventory != null and player != null:
+		_test_inventory_domain(inventory)
+		await _test_pickup_interaction(main_instance, player, inventory)
+		_test_loot_table()
 
 	if player != null and quest_manager != null and gate != null and return_gate != null and enemies.size() == 3:
 		_test_world_progression(player, quest_manager, enemies, gate, return_gate)
@@ -101,6 +129,66 @@ func _run_tests() -> void:
 	main_instance.queue_free()
 	await process_frame
 	_finish()
+
+func _test_inventory_domain(inventory: Node) -> void:
+	inventory.clear()
+	var remaining: int = inventory.add_item("bone_fragment", 25)
+	if remaining != 0:
+		failures.append("Inventario recusou itens com espaco disponivel")
+	if inventory.count_item("bone_fragment") != 25:
+		failures.append("Empilhamento deveria manter 25 Fragmentos de Osso")
+	if inventory.used_slots() != 2:
+		failures.append("25 itens com stack 20 deveriam ocupar 2 slots")
+
+	inventory.add_gold(7)
+	if inventory.gold != 7:
+		failures.append("Ouro nao foi adicionado corretamente")
+	if not inventory.spend_gold(3) or inventory.gold != 4:
+		failures.append("Gasto de ouro falhou")
+	if inventory.spend_gold(10):
+		failures.append("Inventario permitiu gastar ouro inexistente")
+
+	var removed: int = inventory.remove_item("bone_fragment", 6)
+	if removed != 6 or inventory.count_item("bone_fragment") != 19:
+		failures.append("Remocao de itens falhou")
+
+	inventory.clear()
+
+func _test_pickup_interaction(main_instance: Node, player: Node, inventory: Node) -> void:
+	var pickup := PICKUP_SCENE.instantiate()
+	main_instance.add_child(pickup)
+	pickup.configure_item("wisp_essence", 2)
+	await process_frame
+
+	pickup.interact(player)
+	await process_frame
+	if inventory.count_item("wisp_essence") != 2:
+		failures.append("Pickup nao adicionou item ao inventario")
+
+	var gold_pickup := PICKUP_SCENE.instantiate()
+	main_instance.add_child(gold_pickup)
+	gold_pickup.configure_gold(5)
+	await process_frame
+	gold_pickup.interact(player)
+	await process_frame
+	if inventory.gold != 5:
+		failures.append("Pickup de ouro nao atualizou a carteira")
+
+	inventory.clear()
+
+func _test_loot_table() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 123456
+	var drops: Array[Dictionary] = LOOT_TABLE.roll("ruins_demon", rng)
+	var found_gold := false
+	var found_shard := false
+	for drop in drops:
+		if drop.has("gold") and int(drop["gold"]) >= 5:
+			found_gold = true
+		if String(drop.get("item_id", "")) == "ruin_shard":
+			found_shard = true
+	if not found_gold or not found_shard:
+		failures.append("Demonio das Ruinas nao gerou seu loot garantido")
 
 func _validate_visual_adapter(entity: Node, entity_label: String) -> void:
 	var adapter := entity.get_node_or_null("VisualAdapter")
@@ -167,7 +255,7 @@ func _check_resource(path: String) -> void:
 
 func _finish() -> void:
 	if failures.is_empty():
-		print("SMOKE TEST OK: gameplay, arte, combate, quest e transicao entre regioes validados.")
+		print("SMOKE TEST OK: gameplay, arte, regioes, inventario, pickups e loot validados.")
 		quit(0)
 		return
 

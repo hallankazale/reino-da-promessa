@@ -1,6 +1,9 @@
 extends CanvasLayer
 
+const ITEM_CATALOG = preload("res://scripts/inventory/item_catalog.gd")
+
 @onready var player: Node = get_node_or_null("../Player")
+@onready var inventory: Node = get_node_or_null("../Player/Inventory")
 @onready var quest_manager: Node = get_node_or_null("../QuestManager")
 @onready var region_label: Label = $MarginContainer/Panel/VBox/RegionLabel
 @onready var health_label: Label = $MarginContainer/Panel/VBox/HealthLabel
@@ -27,6 +30,12 @@ func _ready() -> void:
 		player.died.connect(_on_player_died)
 	if player.has_signal("respawned"):
 		player.respawned.connect(_on_player_respawned)
+
+	if inventory != null:
+		if inventory.has_signal("item_added"):
+			inventory.item_added.connect(_on_item_added)
+		if inventory.has_signal("gold_changed"):
+			inventory.gold_changed.connect(_on_gold_changed)
 
 	if quest_manager != null:
 		if quest_manager.has_signal("quest_changed"):
@@ -90,6 +99,12 @@ func _on_quest_changed(title: String, objective: String, progress: int, goal: in
 
 func _on_message_changed(message: String) -> void:
 	status_label.text = message
+
+func _on_item_added(item_id: String, amount: int) -> void:
+	status_label.text = "Obtido: %s x%d" % [ITEM_CATALOG.display_name(item_id), amount]
+
+func _on_gold_changed(total: int) -> void:
+	status_label.text = "Ouro total: %d" % total
 
 func _on_region_changed(destination_name: String) -> void:
 	region_label.text = destination_name

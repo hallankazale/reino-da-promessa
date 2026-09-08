@@ -2,6 +2,7 @@ extends CharacterBody3D
 
 signal health_changed(current_health: int, max_health: int)
 signal defeated(enemy_kind: String)
+signal loot_requested(enemy_kind: String, world_position: Vector3)
 signal died
 signal respawned
 
@@ -172,6 +173,7 @@ func _die(attacker: Node) -> void:
 		visual_adapter.play_death()
 	died.emit()
 	defeated.emit(enemy_kind)
+	loot_requested.emit(enemy_kind, global_position)
 
 	if attacker != null and attacker.has_method("add_xp"):
 		attacker.add_xp(xp_reward)

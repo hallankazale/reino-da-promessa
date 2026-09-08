@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://cmku3jefj1gmb"]
+[gd_scene load_steps=21 format=3 uid="uid://cmku3jefj1gmb"]
 
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/enemy_base.tscn" id="2_enemy"]
@@ -11,6 +11,8 @@
 [ext_resource type="PackedScene" path="res://assets/third_party/quaternius/ruins_demon.glb" id="9_demon"]
 [ext_resource type="PackedScene" path="res://scenes/world/second_region.tscn" id="10_second"]
 [ext_resource type="PackedScene" path="res://scenes/world/region_gate.tscn" id="11_gate"]
+[ext_resource type="Script" path="res://scripts/loot/loot_manager.gd" id="12_loot"]
+[ext_resource type="PackedScene" path="res://scenes/ui/inventory_panel.tscn" id="13_inventory_ui"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -141,6 +143,9 @@ aggro_range = 10.0
 move_speed = 1.65
 respawn_delay = 9.0
 
+[node name="LootManager" type="Node" parent="."]
+script = ExtResource("12_loot")
+
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("3_hud")
 
@@ -223,4 +228,6 @@ text = "Procure Eliabe no acampamento."
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.74, 0.78, 1)
 theme_override_font_sizes/font_size = 10
-text = "WASD mover  |  TAB alvo  |  ESPACO atacar  |  E falar"
+text = "WASD mover | TAB alvo | ESPACO atacar | E interagir | I inventario"
+
+[node name="InventoryPanel" parent="." instance=ExtResource("13_inventory_ui")]
