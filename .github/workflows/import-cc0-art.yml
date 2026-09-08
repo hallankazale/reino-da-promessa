@@ -1,0 +1,52 @@
+name: Import CC0 Art
+
+on:
+  push:
+    branches: ["feat/art-pass-v1"]
+    paths:
+      - "scripts/import_cc0_art.sh"
+      - ".github/workflows/import-cc0-art.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-art:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout art branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/art-pass-v1
+          fetch-depth: 0
+
+      - name: Download pinned CC0 models
+        shell: bash
+        run: bash scripts/import_cc0_art.sh
+
+      - name: Validate imported GLB files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s assets/third_party/quaternius/pilgrim_guardian.glb
+          test -s assets/third_party/quaternius/wasteland_specter.glb
+          test -s assets/third_party/quaternius/skeleton_raider.glb
+          test -s assets/third_party/quaternius/ruins_demon.glb
+          cat assets/third_party/quaternius/SHA256SUMS.txt
+
+      - name: Commit imported assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/third_party/quaternius
+          if git diff --cached --quiet; then
+            echo "Assets already match the pinned source."
+            exit 0
+          fi
+          git commit -m "chore(assets): import Quaternius CC0 character models"
+          git push origin HEAD:feat/art-pass-v1
