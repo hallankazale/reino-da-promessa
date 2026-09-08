@@ -1,53 +1,28 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/npcs/story_npc.gd" id="1_npc"]
+[ext_resource type="Script" path="res://scripts/art/model_adapter.gd" id="2_adapter"]
+[ext_resource type="PackedScene" path="res://assets/third_party/kaykit_adventurers/Mage.glb" id="3_mage"]
 
-[sub_resource type="StandardMaterial3D" id="Skin"]
-albedo_color = Color(0.72, 0.50, 0.34, 1)
-roughness = 0.92
-
-[sub_resource type="StandardMaterial3D" id="Robe"]
+[sub_resource type="StandardMaterial3D" id="FallbackRobe"]
 albedo_color = Color(0.16, 0.42, 0.40, 1)
 roughness = 0.95
 
-[sub_resource type="StandardMaterial3D" id="Cloth"]
-albedo_color = Color(0.78, 0.72, 0.52, 1)
-roughness = 1.0
+[sub_resource type="StandardMaterial3D" id="FallbackSkin"]
+albedo_color = Color(0.72, 0.50, 0.34, 1)
+roughness = 0.92
 
-[sub_resource type="StandardMaterial3D" id="Wood"]
-albedo_color = Color(0.26, 0.14, 0.06, 1)
-roughness = 1.0
-
-[sub_resource type="StandardMaterial3D" id="Crystal"]
-albedo_color = Color(0.24, 0.78, 0.88, 1)
-emission_enabled = true
-emission = Color(0.10, 0.46, 0.62, 1)
-emission_energy_multiplier = 1.4
-roughness = 0.35
-
-[sub_resource type="SphereMesh" id="Head"]
-radius = 0.23
-height = 0.46
-radial_segments = 14
-rings = 7
-
-[sub_resource type="CylinderMesh" id="RobeMesh"]
-top_radius = 0.34
-bottom_radius = 0.52
-height = 1.12
+[sub_resource type="CylinderMesh" id="FallbackBody"]
+top_radius = 0.30
+bottom_radius = 0.48
+height = 1.20
 radial_segments = 10
 
-[sub_resource type="CapsuleMesh" id="Arm"]
-radius = 0.085
-height = 0.62
-radial_segments = 8
-rings = 4
-
-[sub_resource type="CylinderMesh" id="Staff"]
-top_radius = 0.035
-bottom_radius = 0.045
-height = 1.72
-radial_segments = 8
+[sub_resource type="SphereMesh" id="FallbackHead"]
+radius = 0.23
+height = 0.46
+radial_segments = 12
+rings = 6
 
 [node name="Miriam" type="Node3D"]
 script = ExtResource("1_npc")
@@ -55,54 +30,31 @@ npc_id = "miriam"
 display_name = "Miriam"
 interaction_text = "Falar"
 
-[node name="Robe" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.55, 0)
-mesh = SubResource("RobeMesh")
-material_override = SubResource("Robe")
+[node name="Visual" type="Node3D" parent="."]
 
-[node name="Head" type="MeshInstance3D" parent="."]
-position = Vector3(0, 1.32, 0)
-mesh = SubResource("Head")
-material_override = SubResource("Skin")
+[node name="Body" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, 0.62, 0)
+mesh = SubResource("FallbackBody")
+material_override = SubResource("FallbackRobe")
 
-[node name="Hood" type="MeshInstance3D" parent="."]
-position = Vector3(0, 1.39, 0.04)
-scale = Vector3(1.18, 1.1, 1.18)
-mesh = SubResource("Head")
-material_override = SubResource("Cloth")
+[node name="Head" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, 1.38, 0)
+mesh = SubResource("FallbackHead")
+material_override = SubResource("FallbackSkin")
 
-[node name="Face" type="MeshInstance3D" parent="."]
-position = Vector3(0, 1.32, -0.08)
-scale = Vector3(0.82, 0.88, 0.82)
-mesh = SubResource("Head")
-material_override = SubResource("Skin")
-
-[node name="LeftArm" type="MeshInstance3D" parent="."]
-position = Vector3(-0.43, 0.73, 0)
-rotation_degrees = Vector3(0, 0, -7)
-mesh = SubResource("Arm")
-material_override = SubResource("Robe")
-
-[node name="RightArm" type="MeshInstance3D" parent="."]
-position = Vector3(0.43, 0.73, 0)
-rotation_degrees = Vector3(0, 0, 7)
-mesh = SubResource("Arm")
-material_override = SubResource("Robe")
-
-[node name="Staff" type="MeshInstance3D" parent="."]
-position = Vector3(0.62, 0.68, 0)
-mesh = SubResource("Staff")
-material_override = SubResource("Wood")
-
-[node name="Crystal" type="MeshInstance3D" parent="."]
-position = Vector3(0.62, 1.58, 0)
-scale = Vector3(0.55, 0.72, 0.55)
-mesh = SubResource("Head")
-material_override = SubResource("Crystal")
+[node name="VisualAdapter" type="Node3D" parent="."]
+script = ExtResource("2_adapter")
+model_scene = ExtResource("3_mage")
+use_imported_model = true
+target_height = 1.72
+feet_y = 0.0
+yaw_degrees = 180.0
+fallback_path = NodePath("../Visual")
+auto_locomotion = false
 
 [node name="QuestMarker" type="Label3D" parent="."]
 visible = false
-position = Vector3(0, 2.05, 0)
+position = Vector3(0, 2.15, 0)
 text = "!"
 billboard = 1
 font_size = 34
