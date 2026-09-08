@@ -46,8 +46,8 @@ func _sync_quest() -> void:
 	if quest_manager == null:
 		quest_label.text = "Missao: sistema indisponivel"
 		return
-	if quest_manager.has_method("_emit_state"):
-		quest_manager.call_deferred("_emit_state")
+	if quest_manager.has_method("publish_state"):
+		quest_manager.call_deferred("publish_state")
 
 func _on_health_changed(current_health: int, max_health: int) -> void:
 	health_bar.max_value = max_health
