@@ -10,6 +10,13 @@ signal respawned
 @export var enemy_kind: String = "hostile"
 @export var body_color: Color = Color(0.62, 0.18, 0.15, 1.0)
 
+@export_category("Visual")
+@export var visual_scene: PackedScene
+@export var visual_target_height: float = 1.45
+@export var visual_feet_y: float = -0.7
+@export var visual_yaw_degrees: float = 0.0
+@export var death_visual_delay: float = 0.55
+
 @export_category("Combat")
 @export var max_health: int = 30
 @export var xp_reward: int = 10
@@ -30,6 +37,7 @@ var _is_alive: bool = true
 var _spawn_transform: Transform3D
 
 @onready var body: MeshInstance3D = $Body
+@onready var visual_adapter: Node = $VisualAdapter
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var name_label: Label3D = $NameLabel
 @onready var health_label: Label3D = $HealthLabel
@@ -43,6 +51,7 @@ func _ready() -> void:
 	name_label.text = display_name
 	selection_marker.visible = false
 	_apply_body_color()
+	_configure_visual()
 	_update_health_ui()
 
 func _physics_process(delta: float) -> void:
@@ -130,6 +139,8 @@ func _try_attack(player: Node) -> void:
 	if _attack_cooldown_remaining > 0.0:
 		return
 	if player.has_method("take_damage"):
+		if visual_adapter != null and visual_adapter.has_method("play_attack"):
+			visual_adapter.play_attack(minf(attack_cooldown, 0.65))
 		player.take_damage(attack_damage, self)
 		_attack_cooldown_remaining = attack_cooldown
 
@@ -140,15 +151,23 @@ func _die(attacker: Node) -> void:
 	_is_alive = false
 	velocity = Vector3.ZERO
 	selection_marker.visible = false
-	visible = false
 	collision_shape.set_deferred("disabled", true)
+	if visual_adapter != null and visual_adapter.has_method("play_death"):
+		visual_adapter.play_death()
 	died.emit()
 	defeated.emit(enemy_kind)
 
 	if attacker != null and attacker.has_method("add_xp"):
 		attacker.add_xp(xp_reward)
 
-	await get_tree().create_timer(respawn_delay).timeout
+	var visible_death_time := minf(death_visual_delay, respawn_delay)
+	if visible_death_time > 0.0:
+		await get_tree().create_timer(visible_death_time).timeout
+	visible = false
+
+	var hidden_time := maxf(respawn_delay - visible_death_time, 0.0)
+	if hidden_time > 0.0:
+		await get_tree().create_timer(hidden_time).timeout
 	_respawn()
 
 func _respawn() -> void:
@@ -158,9 +177,21 @@ func _respawn() -> void:
 	_is_alive = true
 	visible = true
 	collision_shape.set_deferred("disabled", false)
+	if visual_adapter != null and visual_adapter.has_method("reset_state"):
+		visual_adapter.reset_state()
 	_update_health_ui()
 	health_changed.emit(current_health, max_health)
 	respawned.emit()
+
+func _configure_visual() -> void:
+	if visual_adapter == null or not visual_adapter.has_method("configure"):
+		return
+	visual_adapter.configure(
+		visual_scene,
+		visual_target_height,
+		visual_yaw_degrees,
+		visual_feet_y
+	)
 
 func _apply_body_color() -> void:
 	var material := StandardMaterial3D.new()
