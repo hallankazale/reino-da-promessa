@@ -19,6 +19,7 @@ signal respawned
 @export var attack_cooldown: float = 0.55
 @export var target_search_range: float = 12.0
 @export var respawn_delay: float = 2.0
+@export var death_visual_delay: float = 0.6
 
 @export_category("Interaction")
 @export var interaction_range: float = 3.2
@@ -32,6 +33,8 @@ var selected_target: Node3D = null
 var _attack_cooldown_remaining: float = 0.0
 var _spawn_transform: Transform3D
 var _is_alive: bool = true
+
+@onready var visual_adapter: Node = get_node_or_null("VisualAdapter")
 
 func _ready() -> void:
 	_spawn_transform = global_transform
@@ -144,6 +147,8 @@ func _attack_selected_target() -> void:
 		return
 
 	_attack_cooldown_remaining = attack_cooldown
+	if visual_adapter != null and visual_adapter.has_method("play_attack"):
+		visual_adapter.play_attack(attack_cooldown)
 	if selected_target.has_method("take_damage"):
 		selected_target.take_damage(attack_damage, self)
 
@@ -201,10 +206,18 @@ func _die() -> void:
 	_is_alive = false
 	velocity = Vector3.ZERO
 	_clear_target()
-	visible = false
+	if visual_adapter != null and visual_adapter.has_method("play_death"):
+		visual_adapter.play_death()
 	died.emit()
 
-	await get_tree().create_timer(respawn_delay).timeout
+	var visible_death_time := minf(death_visual_delay, respawn_delay)
+	if visible_death_time > 0.0:
+		await get_tree().create_timer(visible_death_time).timeout
+	visible = false
+
+	var hidden_time := maxf(respawn_delay - visible_death_time, 0.0)
+	if hidden_time > 0.0:
+		await get_tree().create_timer(hidden_time).timeout
 	_respawn()
 
 func _respawn() -> void:
@@ -212,6 +225,8 @@ func _respawn() -> void:
 	current_health = max_health
 	_is_alive = true
 	visible = true
+	if visual_adapter != null and visual_adapter.has_method("reset_state"):
+		visual_adapter.reset_state()
 	health_changed.emit(current_health, max_health)
 	respawned.emit()
 
