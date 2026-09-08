@@ -34,7 +34,7 @@ radial_segments = 8
 [node name="Eliabe" type="Node3D"]
 script = ExtResource("1_npc")
 display_name = "Eliabe"
-interaction_text = "Falar com Eliabe"
+interaction_text = "Falar"
 
 [node name="Torso" type="MeshInstance3D" parent="."]
 position = Vector3(0, 0.55, 0)
@@ -63,17 +63,19 @@ position = Vector3(0.68, 0.45, 0)
 mesh = SubResource("Staff")
 
 [node name="NameLabel" type="Label3D" parent="."]
+visible = false
 position = Vector3(0, 1.75, 0)
 text = "Eliabe - Guardiao do Acampamento"
 billboard = 1
-font_size = 28
-outline_size = 6
+font_size = 22
+outline_size = 5
 modulate = Color(0.96, 0.84, 0.48, 1)
 
 [node name="PromptLabel" type="Label3D" parent="."]
+visible = false
 position = Vector3(0, 1.48, 0)
 text = "E - Falar com Eliabe"
 billboard = 1
-font_size = 20
+font_size = 18
 outline_size = 5
 modulate = Color(0.9, 0.92, 0.96, 1)
