@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://cmku3jefj1gmb"]
+[gd_scene load_steps=11 format=3 uid="uid://cmku3jefj1gmb"]
 
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/training_enemy.tscn" id="2"]
@@ -12,6 +12,7 @@ ambient_light_energy = 0.7
 
 [sub_resource type="StandardMaterial3D" id="3"]
 albedo_color = Color(0.25, 0.42, 0.22, 1)
+roughness = 1.0
 
 [sub_resource type="PlaneMesh" id="1"]
 size = Vector2(30, 30)
@@ -22,6 +23,43 @@ size = Vector3(30, 0.2, 30)
 [sub_resource type="BoxMesh" id="5"]
 size = Vector3(1.2, 1.2, 1.2)
 
+[sub_resource type="StyleBoxFlat" id="HUDPanel"]
+bg_color = Color(0.035, 0.045, 0.065, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.72, 0.58, 0.25, 0.75)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 16.0
+content_margin_top = 14.0
+content_margin_right = 16.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="BarBackground"]
+bg_color = Color(0.09, 0.1, 0.13, 0.95)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="HealthFill"]
+bg_color = Color(0.64, 0.12, 0.12, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="XPFill"]
+bg_color = Color(0.75, 0.56, 0.12, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [node name="Main" type="Node3D" unique_id=1014635209]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1186915758]
@@ -29,6 +67,7 @@ environment = SubResource("4")
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=605568218]
 transform = Transform3D(0.81915206, 0.46984634, -0.32898995, 0, 0.57357645, 0.81915206, 0.57357645, -0.6710101, 0.46984634, 0, 0, 0)
+shadow_enabled = true
 
 [node name="Ground" type="StaticBody3D" parent="." unique_id=2021344917]
 
@@ -54,13 +93,63 @@ mesh = SubResource("5")
 script = ExtResource("3")
 
 [node name="MarginContainer" type="MarginContainer" parent="HUD" unique_id=81918997]
-anchors_preset = 10
-anchor_right = 1.0
-offset_left = 12.0
-offset_top = 12.0
-offset_right = -12.0
-offset_bottom = 48.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 426.0
+offset_bottom = 274.0
 
-[node name="StatsLabel" type="Label" parent="HUD/MarginContainer" unique_id=557131226]
+[node name="Panel" type="PanelContainer" parent="HUD/MarginContainer"]
 layout_mode = 2
-text = "Nivel 1 | XP 0/20 | Ataque 10 | ESPACO = atacar"
+theme_override_styles/panel = SubResource("HUDPanel")
+
+[node name="VBox" type="VBoxContainer" parent="HUD/MarginContainer/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.82, 0.48, 1)
+theme_override_font_sizes/font_size = 20
+text = "REINO DA PROMESSA"
+
+[node name="HealthLabel" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
+layout_mode = 2
+text = "VIDA  100 / 100"
+
+[node name="HealthBar" type="ProgressBar" parent="HUD/MarginContainer/Panel/VBox"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("BarBackground")
+theme_override_styles/fill = SubResource("HealthFill")
+
+[node name="XPLabel" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
+layout_mode = 2
+text = "XP  0 / 20"
+
+[node name="XPBar" type="ProgressBar" parent="HUD/MarginContainer/Panel/VBox"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+max_value = 20.0
+show_percentage = false
+theme_override_styles/background = SubResource("BarBackground")
+theme_override_styles/fill = SubResource("XPFill")
+
+[node name="StatsLabel" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
+layout_mode = 2
+text = "Nivel 1   |   Ataque 10"
+
+[node name="TargetLabel" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
+layout_mode = 2
+text = "Alvo: nenhum"
+
+[node name="StatusLabel" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
+layout_mode = 2
+autowrap_mode = 2
+text = "Explore, selecione um alvo e lute."
+
+[node name="HelpLabel" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.74, 0.78, 1)
+text = "WASD mover   |   TAB alvo   |   ESPACO atacar"

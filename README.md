@@ -1,67 +1,91 @@
 # Reino da Promessa
 
-Protótipo de RPG 3D original com fantasia bíblica épica, inspirado apenas em estruturas clássicas de MMORPGs como Talisman Online. Não utiliza nomes, mapas, personagens, artes ou assets protegidos do jogo de referência.
+RPG 3D original de fantasia bíblica épica com sensação de MMORPG clássico. O projeto usa referências de gênero — câmera, progressão, combate por alvo e exploração — sem copiar conteúdo protegido de Talisman Online.
 
-## Objetivo do protótipo
+## Estado atual
 
-Validar o ciclo mínimo jogável em hardware fraco:
+O primeiro vertical slice está em construção com foco em hardware fraco:
 
-1. Abrir o jogo.
-2. Controlar o personagem com WASD.
-3. Câmera acompanhar o jogador.
-4. Caminhar pelo primeiro mapa de teste.
-5. Em seguida: inimigo, combate, XP e level.
+- Godot 4.7.x;
+- GDScript;
+- GL Compatibility;
+- resolução-base 960×540;
+- movimento WASD relativo à câmera;
+- câmera estilo MMORPG;
+- seleção de alvo com TAB;
+- ataque com ESPAÇO;
+- HP do jogador;
+- HP do inimigo;
+- cooldown de ataque;
+- inimigo contra-ataca;
+- morte e respawn do jogador;
+- morte e respawn do inimigo;
+- recompensa de XP;
+- level-up com aumento de ataque e vida;
+- HUD com vida, XP, nível, alvo e estado.
 
-## Tecnologia
+## Controles
 
-- Godot 4
-- GDScript
-- Renderer: GL Compatibility
-- Plataforma inicial: Linux/PC
-
-A escolha prioriza baixo consumo de recursos, desenvolvimento rápido e futura exportação para Android.
+| Ação | Tecla |
+|---|---|
+| Mover | WASD |
+| Selecionar inimigo próximo | TAB |
+| Atacar | ESPAÇO |
 
 ## Estrutura
 
 ```text
 scenes/
-  player/
-    player.tscn
-  world/
-    main.tscn
-scripts/
-  player/
-    player_controller.gd
-assets/
-  characters/
-  environments/
   enemies/
-  items/
+  player/
+  world/
+scripts/
+  camera/
+  enemies/
+  player/
   ui/
+docs/
+  ARCHITECTURE.md
+  ASSET_POLICY.md
+tests/
+  smoke_test.gd
 ```
 
-As pastas de assets serão adicionadas conforme conteúdo real entrar no projeto; não serão criadas pastas vazias apenas para aparência.
+A arquitetura completa e o roadmap estão em `docs/ARCHITECTURE.md`.
 
-## Controles
+## Assets
 
-- W: frente
-- S: trás
-- A: esquerda
-- D: direita
+O projeto só adotará conteúdo externo com licença compatível e origem registrada. As fontes aprovadas inicialmente são Quaternius e Kenney em packs explicitamente CC0. Consulte `docs/ASSET_POLICY.md`.
 
-## Teste atual
+Não serão usados modelos, mapas, texturas, sons ou personagens extraídos de jogos comerciais.
 
-Abra `project.godot` no Godot 4 e execute o projeto. O personagem provisório é uma cápsula 3D. Ela será substituída por um modelo final posteriormente, preservando o controlador.
+## Teste rápido
 
-### Critérios de aprovação
+Abra `project.godot` no Godot 4.7.x e execute o projeto.
 
-- O projeto abre sem erros.
-- O mapa aparece.
-- A cápsula não atravessa o chão.
-- WASD movimenta o personagem.
-- A câmera acompanha o personagem.
-- O jogo continua responsivo em hardware fraco.
+### Smoke test headless
+
+```bash
+godot --headless --path . --script tests/smoke_test.gd
+```
+
+Critérios mínimos:
+
+1. projeto carrega sem erro de parser/recurso;
+2. WASD movimenta o personagem;
+3. TAB seleciona o inimigo;
+4. ESPAÇO causa dano apenas dentro do alcance;
+5. inimigo contra-ataca quando o jogador aproxima;
+6. morte do inimigo concede XP uma única vez;
+7. inimigo reaparece após o respawn;
+8. XP suficiente aumenta o nível;
+9. morte do player não trava o jogo e ele retorna ao ponto inicial;
+10. HUD acompanha vida, XP, nível e alvo.
 
 ## Próximo marco
 
-Adicionar primeiro inimigo com vida, detecção, ataque básico, morte, recompensa de XP e progressão de nível.
+Transformar o terreno de teste na primeira área jogável:
+
+**Acampamento do Peregrino → Caminho dos Olivais → Ruínas Antigas**
+
+Nessa etapa entram personagem animado CC0, cenário modular, três tipos de inimigos e o primeiro NPC com missão.
