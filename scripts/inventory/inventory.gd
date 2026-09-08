@@ -95,6 +95,36 @@ func count_item(item_id: String) -> int:
 func get_snapshot() -> Array[Dictionary]:
 	return slots.duplicate(true)
 
+func get_save_state() -> Dictionary:
+	return {
+		"capacity": capacity,
+		"gold": gold,
+		"slots": slots.duplicate(true)
+	}
+
+func load_save_state(data: Dictionary) -> void:
+	slots.clear()
+	gold = maxi(int(data.get("gold", 0)), 0)
+
+	var saved_slots: Array = data.get("slots", [])
+	for raw_slot in saved_slots:
+		if slots.size() >= capacity or not raw_slot is Dictionary:
+			break
+		var slot := raw_slot as Dictionary
+		var item_id := String(slot.get("item_id", ""))
+		var quantity := maxi(int(slot.get("quantity", 0)), 0)
+		if not ITEM_CATALOG.has_item(item_id) or quantity <= 0:
+			continue
+		var remaining := quantity
+		var stack_limit := ITEM_CATALOG.max_stack(item_id)
+		while remaining > 0 and slots.size() < capacity:
+			var moved := mini(stack_limit, remaining)
+			slots.append({"item_id": item_id, "quantity": moved})
+			remaining -= moved
+
+	gold_changed.emit(gold)
+	changed.emit()
+
 func used_slots() -> int:
 	return slots.size()
 
