@@ -13,6 +13,10 @@ class_name ModelAdapter
 @export var yaw_degrees: float = 0.0
 @export var fallback_path: NodePath
 @export var stabilize_model_root: bool = true
+## Some imported GLBs bake locomotion into the parent/root bone. Gameplay already
+## moves the CharacterBody3D, so that translation must not move the skinned body
+## independently from its collision, UI and rigid accessories.
+@export var stabilize_skeleton_roots: bool = true
 
 @export_category("Rendering safety")
 ## Skinned meshes can leave their bind-pose AABB during combat animations and be
@@ -39,8 +43,14 @@ var _model_anchor_position := Vector3.ZERO
 var _model_anchor_rotation := Vector3.ZERO
 var _model_anchor_scale := Vector3.ONE
 var _guarded_meshes: Array[MeshInstance3D] = []
+var _skeleton_root_anchors: Array = []
 
 func _ready() -> void:
+	# AnimationPlayer nodes imported from GLB use the default process priority (0).
+	# Running this adapter later guarantees root-motion correction happens after
+	# the animation has written its bone pose for the frame.
+	process_priority = 100
+
 	if not String(fallback_path).is_empty():
 		_fallback = get_node_or_null(fallback_path) as Node3D
 
@@ -59,6 +69,8 @@ func _process(_delta: float) -> void:
 
 	if stabilize_model_root:
 		_restore_model_root_transform()
+	if stabilize_skeleton_roots:
+		_restore_skeleton_root_anchors()
 
 	if not auto_locomotion or _animation_player == null or _death_locked:
 		return
@@ -123,6 +135,14 @@ func get_render_guard_mesh_count() -> int:
 			count += 1
 	return count
 
+func get_skeleton_root_anchor_count() -> int:
+	var count := 0
+	for entry in _skeleton_root_anchors:
+		var skeleton := entry.get("skeleton") as Skeleton3D
+		if is_instance_valid(skeleton):
+			count += 1
+	return count
+
 func are_loaded_meshes_visible() -> bool:
 	if is_using_fallback():
 		return is_instance_valid(_fallback) and _fallback.visible
@@ -171,6 +191,7 @@ func reset_state() -> void:
 		_call_fallback("reset_state")
 		return
 	_restore_model_root_transform()
+	_restore_skeleton_root_anchors()
 	_apply_render_guard()
 	play_idle()
 
@@ -181,6 +202,7 @@ func _instantiate_model() -> void:
 	_animation_player = null
 	_current_animation = &""
 	_guarded_meshes.clear()
+	_skeleton_root_anchors.clear()
 
 	if not use_imported_model or model_scene == null:
 		_set_fallback_visible(true)
@@ -202,6 +224,7 @@ func _instantiate_model() -> void:
 
 	_normalize_height()
 	_capture_model_root_transform()
+	_capture_skeleton_root_anchors()
 	_apply_render_guard()
 	_animation_player = _find_animation_player(_model_root)
 	_set_fallback_visible(false)
@@ -237,6 +260,35 @@ func _restore_model_root_transform() -> void:
 	_model_root.position = _model_anchor_position
 	_model_root.rotation = _model_anchor_rotation
 	_model_root.scale = _model_anchor_scale
+
+func _capture_skeleton_root_anchors() -> void:
+	_skeleton_root_anchors.clear()
+	if not stabilize_skeleton_roots or not is_instance_valid(_model_root):
+		return
+
+	var skeletons: Array[Skeleton3D] = []
+	_collect_skeletons(_model_root, skeletons)
+	for skeleton in skeletons:
+		for bone_index in range(skeleton.get_bone_count()):
+			if skeleton.get_bone_parent(bone_index) != -1:
+				continue
+			_skeleton_root_anchors.append({
+				"skeleton": skeleton,
+				"bone": bone_index,
+				"position": skeleton.get_bone_pose_position(bone_index)
+			})
+
+func _restore_skeleton_root_anchors() -> void:
+	if not stabilize_skeleton_roots:
+		return
+	for entry in _skeleton_root_anchors:
+		var skeleton := entry.get("skeleton") as Skeleton3D
+		if not is_instance_valid(skeleton):
+			continue
+		var bone_index := int(entry.get("bone", -1))
+		if bone_index < 0 or bone_index >= skeleton.get_bone_count():
+			continue
+		skeleton.set_bone_pose_position(bone_index, entry.get("position", Vector3.ZERO))
 
 func _apply_render_guard() -> void:
 	_guarded_meshes.clear()
@@ -290,6 +342,12 @@ func _collect_meshes(node: Node, output: Array[MeshInstance3D]) -> void:
 		output.append(node as MeshInstance3D)
 	for child in node.get_children():
 		_collect_meshes(child, output)
+
+func _collect_skeletons(node: Node, output: Array[Skeleton3D]) -> void:
+	if node is Skeleton3D:
+		output.append(node as Skeleton3D)
+	for child in node.get_children():
+		_collect_skeletons(child, output)
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
 	if node is AnimationPlayer:

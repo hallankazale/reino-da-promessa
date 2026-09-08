@@ -62,6 +62,31 @@ func _validate_skeleton_visual(skeleton: Node) -> void:
 		if mesh_instance.custom_aabb.size.length() <= mesh_instance.get_aabb().size.length():
 			failures.append("AABB nao foi expandido: %s" % mesh_instance.name)
 
+	# O bug real do SkeletonRaider vinha do corpo skinned escapando da entidade
+	# enquanto a arma rigida permanecia no lugar. Validamos que o root bone do rig
+	# fica ancorado mesmo que uma animacao tente desloca-lo.
+	var skeleton_nodes: Array[Skeleton3D] = []
+	_collect_skeletons(imported, skeleton_nodes)
+	if skeleton_nodes.is_empty():
+		failures.append("SkeletonRaider importado nao possui Skeleton3D")
+		return
+
+	if not adapter.has_method("get_skeleton_root_anchor_count") or int(adapter.get_skeleton_root_anchor_count()) <= 0:
+		failures.append("ModelAdapter nao capturou root bone do SkeletonRaider")
+		return
+
+	var rig := skeleton_nodes[0]
+	var root_bone := _find_root_bone(rig)
+	if root_bone < 0:
+		failures.append("SkeletonRaider nao possui bone raiz")
+		return
+
+	var anchored_root_position := rig.get_bone_pose_position(root_bone)
+	rig.set_bone_pose_position(root_bone, anchored_root_position + Vector3(4.0, 2.0, -3.0))
+	await process_frame
+	if rig.get_bone_pose_position(root_bone).distance_to(anchored_root_position) > 0.001:
+		failures.append("Root bone do esqueleto nao foi estabilizado")
+
 	# Reproduz as trocas de animacao mais comuns do bug observado: locomocao + ataque.
 	if adapter.has_method("play_move"):
 		adapter.play_move()
@@ -69,6 +94,8 @@ func _validate_skeleton_visual(skeleton: Node) -> void:
 		await process_frame
 	if adapter.has_method("are_loaded_meshes_visible") and not adapter.are_loaded_meshes_visible():
 		failures.append("Mesh desapareceu durante locomocao")
+	if rig.get_bone_pose_position(root_bone).distance_to(anchored_root_position) > 0.001:
+		failures.append("Locomocao deslocou o root bone do esqueleto")
 
 	if adapter.has_method("play_attack"):
 		adapter.play_attack(0.35)
@@ -76,12 +103,26 @@ func _validate_skeleton_visual(skeleton: Node) -> void:
 		await process_frame
 	if adapter.has_method("are_loaded_meshes_visible") and not adapter.are_loaded_meshes_visible():
 		failures.append("Mesh desapareceu durante ataque")
+	if rig.get_bone_pose_position(root_bone).distance_to(anchored_root_position) > 0.001:
+		failures.append("Ataque deslocou o root bone do esqueleto")
+
+func _find_root_bone(skeleton: Skeleton3D) -> int:
+	for bone_index in range(skeleton.get_bone_count()):
+		if skeleton.get_bone_parent(bone_index) == -1:
+			return bone_index
+	return -1
 
 func _collect_meshes(node: Node, output: Array[MeshInstance3D]) -> void:
 	if node is MeshInstance3D:
 		output.append(node as MeshInstance3D)
 	for child in node.get_children():
 		_collect_meshes(child, output)
+
+func _collect_skeletons(node: Node, output: Array[Skeleton3D]) -> void:
+	if node is Skeleton3D:
+		output.append(node as Skeleton3D)
+	for child in node.get_children():
+		_collect_skeletons(child, output)
 
 func _finish() -> void:
 	if failures.is_empty():
