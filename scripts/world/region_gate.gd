@@ -6,7 +6,6 @@ signal used(destination_name: String)
 @export var destination_position: Vector3 = Vector3(120.0, 1.15, 22.0)
 @export var locked_message: String = "A passagem esta selada. Conclua a missao de Eliabe primeiro."
 
-@onready var barrier_body: StaticBody3D = $LockedBarrier
 @onready var barrier_visual: MeshInstance3D = $LockedBarrier/BarrierVisual
 @onready var barrier_collision: CollisionShape3D = $LockedBarrier/CollisionShape3D
 @onready var portal_plane: MeshInstance3D = $PortalPlane
@@ -15,6 +14,7 @@ signal used(destination_name: String)
 
 func _ready() -> void:
 	add_to_group("interactables")
+	add_to_group("region_gates")
 	call_deferred("_connect_quest_manager")
 	call_deferred("_sync_state")
 
@@ -29,7 +29,7 @@ func interact(player: Node) -> void:
 	body.global_position = destination_position
 	if body is CharacterBody3D:
 		(body as CharacterBody3D).velocity = Vector3.ZERO
-	_announce("Voce atravessou as Ruinas Antigas e chegou ao %s." % destination_name)
+	_announce("Voce chegou a: %s." % destination_name)
 	used.emit(destination_name)
 
 func is_unlocked() -> bool:
