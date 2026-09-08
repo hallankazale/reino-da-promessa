@@ -1,9 +1,10 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera/mmorpg_camera.gd" id="2_camera"]
 [ext_resource type="Script" path="res://scripts/art/model_adapter.gd" id="3_art"]
 [ext_resource type="PackedScene" path="res://assets/third_party/quaternius/pilgrim_guardian.glb" id="4_guardian"]
+[ext_resource type="Script" path="res://scripts/inventory/inventory.gd" id="5_inventory"]
 
 [sub_resource type="CapsuleShape3D" id="PlayerCollision"]
 radius = 0.42
@@ -48,6 +49,10 @@ size = Vector3(0.22, 0.12, 0.38)
 
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_player")
+
+[node name="Inventory" type="Node" parent="."]
+script = ExtResource("5_inventory")
+capacity = 20
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("PlayerCollision")
