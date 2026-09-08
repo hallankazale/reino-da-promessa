@@ -14,8 +14,8 @@ class_name ModelAdapter
 
 @export_category("Animation discovery")
 @export var idle_tokens: PackedStringArray = PackedStringArray(["idle", "stand"])
-@export var move_tokens: PackedStringArray = PackedStringArray(["run", "walk", "move"])
-@export var attack_tokens: PackedStringArray = PackedStringArray(["attack", "sword", "strike", "hit"])
+@export var move_tokens: PackedStringArray = PackedStringArray(["run", "walk", "move", "flying"])
+@export var attack_tokens: PackedStringArray = PackedStringArray(["attack", "sword", "strike", "punch", "weapon", "headbutt"])
 @export var death_tokens: PackedStringArray = PackedStringArray(["death", "die", "dead"])
 @export var auto_locomotion: bool = true
 
