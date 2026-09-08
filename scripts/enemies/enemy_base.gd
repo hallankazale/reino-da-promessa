@@ -232,6 +232,8 @@ func _update_health_ui_visibility(delta: float) -> void:
 	_set_health_ui_visible(_health_ui_timer > 0.0)
 
 func _set_health_ui_visible(is_visible: bool) -> void:
+	if is_instance_valid(name_label):
+		name_label.visible = is_visible
 	if is_instance_valid(health_label):
 		health_label.visible = is_visible
 	if is_instance_valid(health_bar):
