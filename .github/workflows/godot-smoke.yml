@@ -51,3 +51,11 @@ jobs:
             --headless \
             --path . \
             --script tests/movement_grounding_test.gd
+
+      - name: Run animated render guard regression
+        shell: bash
+        run: |
+          .godot-bin/Godot_v4.7.2-stable_linux.x86_64 \
+            --headless \
+            --path . \
+            --script tests/animated_render_guard_test.gd
