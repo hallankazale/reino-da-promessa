@@ -31,6 +31,9 @@ func _run_tests() -> void:
 		var npc := main_instance.get_node_or_null(npc_name) as Node3D
 		_validate_npc_grounding(npc_name, npc)
 
+	var second_region := main_instance.get_node_or_null("SecondRegion") as Node3D
+	await _validate_bridge_walkability(main_instance, second_region)
+
 	main_instance.queue_free()
 	await process_frame
 	_finish()
@@ -92,6 +95,66 @@ func _validate_npc_grounding(npc_name: String, npc: Node3D) -> void:
 	var ground_y: float = float(snap.get("last_ground_y"))
 	if absf(npc.global_position.y - ground_y) > 0.02:
 		failures.append("%s continua fora do nivel do terreno" % npc_name)
+
+func _validate_bridge_walkability(main_instance: Node, second_region: Node3D) -> void:
+	if second_region == null:
+		failures.append("Vale das Fontes ausente no teste da ponte")
+		return
+
+	var bridge := second_region.get_node_or_null("StoneBridge") as Node3D
+	if bridge == null:
+		failures.append("StoneBridge nao foi construida")
+		return
+	if bridge.get_node_or_null("BridgeDeckCollision") == null:
+		failures.append("Ponte nao possui tabuleiro de colisao continuo")
+		return
+
+	# Godot pode renomear automaticamente o segundo filho com o mesmo nome.
+	# Identificamos as rampas pela funcao fisica: StaticBody inclinado nas duas extremidades.
+	var ramp_count := 0
+	for child in bridge.get_children():
+		if child is StaticBody3D:
+			var body := child as StaticBody3D
+			if absf(body.rotation_degrees.x) > 1.0 and absf(body.position.z) > 3.0:
+				ramp_count += 1
+	if ramp_count != 2:
+		failures.append("Ponte deveria possuir 2 rampas caminhaveis")
+		return
+
+	# Probe com a mesma capsula do jogador. Ele precisa sair do caminho de chegada,
+	# subir a primeira rampa, atravessar o tabuleiro e descer do outro lado.
+	var probe := CharacterBody3D.new()
+	probe.name = "BridgeTraversalProbe"
+	probe.floor_snap_length = 0.45
+	probe.floor_max_angle = deg_to_rad(46.0)
+	var collision := CollisionShape3D.new()
+	var capsule := CapsuleShape3D.new()
+	capsule.radius = 0.42
+	capsule.height = 1.8
+	collision.shape = capsule
+	probe.add_child(collision)
+	main_instance.add_child(probe)
+	probe.global_position = second_region.to_global(Vector3(0.0, 1.15, 6.4))
+
+	for _frame in range(3):
+		await physics_frame
+
+	for _step in range(180):
+		probe.velocity.x = 0.0
+		probe.velocity.z = -4.0
+		if probe.is_on_floor():
+			probe.velocity.y = 0.0
+		else:
+			probe.velocity.y -= 18.0 / 60.0
+		probe.move_and_slide()
+		await physics_frame
+
+	var end_local := second_region.to_local(probe.global_position)
+	if end_local.z > -2.8:
+		failures.append("Capsula do jogador continua bloqueada na ponte; terminou em Z=%.2f" % end_local.z)
+
+	probe.queue_free()
+	await process_frame
 
 func _finish() -> void:
 	if failures.is_empty():
