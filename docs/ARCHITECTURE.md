@@ -2,125 +2,90 @@
 
 ## Objetivo
 
-Construir um RPG 3D de fantasia bíblica com sensação de MMORPG clássico, começando offline e local para validar gameplay, performance e direção de arte antes de adicionar infraestrutura online.
+Construir um RPG 3D de fantasia bíblica com sensação de MMORPG clássico, começando offline/local para validar gameplay, performance e direção de arte antes de adicionar infraestrutura online.
 
 ## Princípios
 
 1. **Gameplay antes de conteúdo em massa** — nenhum mapa gigante antes de combate, progressão e navegação estarem sólidos.
-2. **Baixo custo de hardware** — GL Compatibility, geometrias simples no protótipo, LOD e assets otimizados na produção.
-3. **Lógica desacoplada da arte** — player, combate, progressão, quests e HUD não dependem de um modelo 3D específico.
-4. **Arte por contrato semântico** — gameplay pede `play_attack()`, `play_death()` ou locomotion; não conhece nomes de clips, ossos ou meshes importados.
-5. **Interação reutilizável** — NPCs, baús, portas e vendedores usam o mesmo contrato `interact(player)`.
-6. **Dados antes de duplicação** — itens, inimigos, classes e quests migrarão para Resources/arquivos de dados conforme o volume crescer.
-7. **Multiplayer só depois do vertical slice** — rede prematura aumenta drasticamente custo de depuração e segurança.
+2. **Baixo custo de hardware** — GL Compatibility, geometria procedural leve e assets externos selecionados.
+3. **Lógica desacoplada da arte** — combate e IA não dependem de um modelo 3D específico.
+4. **Arte por contrato semântico** — gameplay pede `play_attack()`, `play_death()` etc.; não conhece rigs ou nomes de clips.
+5. **Interação reutilizável** — NPCs, passagens, baús e vendedores usam `interact(player)`.
+6. **Progressão abre o mundo** — regiões podem exigir estado de quest, nível ou item sem duplicar lógica no player.
+7. **Estado contínuo entre regiões** — enquanto o jogo for local, as áreas coexistem no mesmo mundo para preservar XP, HP e progresso sem serialização prematura.
+8. **Multiplayer só depois do vertical slice** — rede entra após profiling e regras de gameplay estabilizadas.
 
 ## Camadas
 
 ```text
 scenes/
   player/        física + composição do jogador
-  enemies/       cena-base reutilizável de entidades hostis
+  enemies/       cena-base reutilizável de hostis
   npcs/          NPCs e pontos de interação
-  world/         mapas e composição de regiões
+  ui/            feedback visual reutilizável
+  world/         regiões e passagens
 
 scripts/
   art/           adaptação de modelos/animações importados
-  player/        movimento, seleção, combate, interação e progressão
-  enemies/       IA reutilizável de perseguição/combate/respawn
-  npcs/          contratos de interação com NPCs
-  quests/        estado e progressão de missões
-  camera/        câmera estilo MMORPG
-  ui/            apresentação e feedback ao jogador
-  world/         composição procedural leve das regiões
+  player/        movimento, combate, interação e progressão
+  enemies/       IA, dano, morte e respawn
+  npcs/          contratos de interação
+  quests/        regras e estado de missão
+  camera/        câmera MMORPG
+  ui/            HUD e feedback de combate
+  world/         builders procedurais e transições regionais
 
 assets/
-  third_party/   arquivos externos aprovados e rastreados
-  ATTRIBUTION.md manifesto de procedência/licença
+  third_party/   conteúdo externo aprovado e rastreado
+  ATTRIBUTION.md procedência/licença
 
-data/            classes, itens, quests e drops quando o volume justificar
-tests/           smoke tests de recursos + integração do loop jogável
+data/            itens, classes, drops e quests quando o volume crescer
+tests/           smoke tests de integração do vertical slice
 ```
 
 ## Fluxo atual
 
 ```text
-Jogador nasce no Acampamento do Peregrino
-        ↓
-E interage com Eliabe
-        ↓
-Missão "Limpe o Caminho" inicia
-        ↓
-Jogador segue pelo Caminho dos Olivais
-        ↓
-TAB seleciona inimigo / ESPAÇO ataca
-        ↓
-3 criaturas derrotadas
-        ↓
-Missão fica pronta para entrega
-        ↓
-Jogador retorna a Eliabe
-        ↓
-Missão concluída → recompensa XP
-        ↓
-Progressão de nível continua normalmente
-```
-
-## Primeira região
-
-A primeira região é intencionalmente compacta e legível:
-
-```text
 Acampamento do Peregrino
         ↓
-Espectro do Ermo
+Eliabe entrega "Limpe o Caminho"
         ↓
 Caminho dos Olivais
         ↓
-Esqueleto Saqueador
+3 criaturas derrotadas
         ↓
-Ruínas Antigas
+Volta a Eliabe
         ↓
-Demônio das Ruínas
+Quest concluída + XP
+        ↓
+Passagem das Ruínas é desbloqueada
+        ↓
+Vale das Fontes
+        ↕
+Passagem de retorno às Ruínas Antigas
 ```
 
-O cenário ainda usa primitives geradas por `first_region_builder.gd`. Personagem e inimigos já usam modelos animados CC0. A próxima troca ambiental pode acontecer sem alterar player, combate, quests, NPCs ou HUD.
+## Regiões
 
-## Camada de arte animada
+### Região 1 — Acampamento do Peregrino
 
-`ModelAdapter` é a fronteira entre gameplay e arquivos importados.
+Contém acampamento, estrada, oliveiras, ruínas, Eliabe e os três inimigos atuais. O cenário é gerado por `first_region_builder.gd` com materiais compartilhados e proxies de colisão simples.
 
-```text
-Player / Enemy AI
-        ↓ intenção semântica
-ModelAdapter
-        ↓ descoberta de clips
-AnimationPlayer do GLB
-```
+### Região 2 — Vale das Fontes
 
-Responsabilidades do adaptador:
-
-- instanciar o `PackedScene` importado;
-- medir bounds e normalizar altura;
-- alinhar os pés à cápsula física;
-- ocultar o fallback procedural quando o modelo carrega;
-- descobrir clips por intenção (`idle`, `run`, `attack`, `death` etc.);
-- tocar loops e one-shots sem expor detalhes do asset ao gameplay.
-
-Assim um modelo pode ser substituído sem reescrever IA ou combate.
+Área segura de expansão gerada por `second_region_builder.gd`. Possui riacho, ponte, vegetação e santuário da fonte. Fica fisicamente afastada da primeira região dentro da mesma cena principal para manter estado do jogador sem introduzir save/load antes da hora.
 
 ## Contratos principais
 
 ### Player → Interactables
-O player busca o objeto mais próximo no grupo `interactables` dentro do alcance e chama:
 
 ```text
 interactable.interact(player)
 ```
 
-Isso evita criar teclas e fluxos exclusivos para cada tipo de objeto.
+O player não precisa saber se o objeto é NPC, passagem, baú ou vendedor.
 
 ### Gameplay → ModelAdapter
-Controladores chamam apenas métodos semânticos:
 
 ```text
 visual_adapter.play_attack()
@@ -128,69 +93,93 @@ visual_adapter.play_death()
 visual_adapter.reset_state()
 ```
 
-Locomoção é inferida pela velocidade horizontal do `CharacterBody3D`.
+`ModelAdapter` instancia o GLB, normaliza escala, alinha os pés e encontra animações por intenção.
 
 ### Enemy → QuestManager
-Todo inimigo-base emite `defeated(enemy_kind)` uma única vez por morte. O `QuestManager` escuta esse evento e decide se a derrota conta para a missão ativa.
 
-### QuestManager → HUD
-O sistema de missões expõe sinais de estado e mensagem. O HUD apenas apresenta esses eventos; ele não decide regras de missão.
+Inimigos emitem `defeated(enemy_kind)`. O `QuestManager` decide se a morte conta para a missão.
+
+### QuestManager → World Progression
+
+O `QuestManager` expõe:
+
+```text
+is_first_quest_completed()
+announce(message)
+```
+
+`RegionGate` consulta apenas essa API pública. A passagem não conhece detalhes internos do enum de quest.
+
+### RegionGate → HUD
+
+Passagens emitem:
+
+```text
+used(destination_name)
+```
+
+O HUD atualiza o nome da região sem controlar teleporte ou regras de desbloqueio.
+
+### Combat → DamagePopup
+
+Player e inimigos instanciam `damage_popup.tscn` ao receber dano. A cena controla animação e descarte do número flutuante; entidades apenas informam valor e cor.
+
+## Estratégia de mundo
+
+Por enquanto, regiões coexistem em uma única cena e ficam separadas espacialmente. Isso evita reset de estado e simplifica QA.
+
+Quando o número de regiões ou custo de memória justificar, essa camada migra para streaming/carregamento regional. O contrato de `RegionGate` permanece e o destino poderá trocar de posição para um identificador de região carregável.
 
 ## Pipeline de assets
 
-Arquivos externos só entram com origem/licença registrada em `assets/ATTRIBUTION.md`.
-
-O importador `scripts/import_cc0_art.sh` fixa a versão do espelho e gera SHA-256 dos GLBs. O CI usa `godot --import` antes do smoke test, garantindo que recursos não nativos terminem a importação antes dos testes.
+Assets externos só entram com licença/origem registradas em `assets/ATTRIBUTION.md`. O CI executa `godot --import` antes do smoke test para garantir que GLBs estejam totalmente importados.
 
 ## Roadmap técnico
 
 ### Marco 1 — Combate base ✅
 - movimento e câmera
 - target lock
-- HP de player/inimigo
-- ataque e cooldown
+- HP e ataque
 - morte/respawn
 - XP e level
 - HUD
 
 ### Marco 2 — Mundo jogável ✅
-- Acampamento do Peregrino
-- Caminho dos Olivais
-- Ruínas Antigas
-- 3 perfis de inimigos
-- colisões essenciais
-- NPC de missão
-- ciclo de missão com recompensa
+- primeira região
+- Eliabe
+- 3 inimigos
+- missão completa
+- recompensa
 
-### Marco 2.5 — Direção de arte jogável — em andamento
-- ✅ personagem animado CC0
-- ✅ três inimigos animados CC0
-- ✅ adaptador visual desacoplado
-- ✅ importação/QA de GLB no CI
-- ⏳ cenário modular otimizado
-- ⏳ feedback de impacto/dano
-- ⏳ portal/saída para segunda região
+### Marco 3 — Mundo expandido + feedback ✅
+- câmera/HUD refinados
+- cenário procedural redesenhado
+- números de dano
+- passagem bloqueada por quest
+- Vale das Fontes
+- ida e volta entre regiões
+- teste de integração da progressão regional
 
-### Marco 3 — RPG sistêmico
+### Marco 4 — RPG sistêmico — próximo
 - inventário
-- equipamentos
+- itens
 - drops
+- moeda
+- equipamentos
 - atributos
-- habilidades
 - loja/ferreiro
-- quests persistentes
 - save local versionado
 
-### Marco 4 — Conteúdo e identidade
-- variações de personagem
+### Marco 5 — Conteúdo e identidade
+- habilidades
 - VFX/SFX
 - minimapa
 - mapa geral
 - primeira dungeon
-- direção de arte consistente
+- quests persistentes
 
-### Marco 5 — Online
-Somente após profiling e validação do loop offline:
+### Marco 6 — Online
+Somente após profiling e validação offline:
 - servidor autoritativo
 - autenticação
 - persistência remota
@@ -202,13 +191,4 @@ Somente após profiling e validação do loop offline:
 
 ## Segurança futura do online
 
-Quando a fase online começar, o cliente nunca será autoridade para:
-- dinheiro;
-- XP;
-- inventário;
-- dano;
-- posição válida de combate;
-- drops;
-- conclusão de quest.
-
-Esses estados serão validados pelo servidor para reduzir trapaças, duplicação de itens e manipulação de pacotes.
+Quando a fase online começar, o cliente nunca será autoridade para dinheiro, XP, inventário, dano, posição válida de combate, drops ou conclusão de quest. Esses estados serão validados pelo servidor para reduzir trapaças, duplicação e manipulação de pacotes.
