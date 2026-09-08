@@ -41,6 +41,8 @@ func _ready() -> void:
 		_set_fallback_visible(true)
 
 func _process(_delta: float) -> void:
+	if is_using_fallback():
+		return
 	if not auto_locomotion or _animation_player == null or _death_locked:
 		return
 	if Time.get_ticks_msec() < _action_lock_until_ms:
@@ -80,26 +82,41 @@ func get_animation_names() -> PackedStringArray:
 
 func play_idle() -> void:
 	_death_locked = false
+	if is_using_fallback():
+		_call_fallback("play_idle")
+		return
 	_play_loop(idle_tokens)
 
 func play_move() -> void:
+	if is_using_fallback():
+		_call_fallback("play_move")
+		return
 	_play_loop(move_tokens)
 
 func play_attack(lock_seconds: float = 0.45) -> void:
 	if _death_locked:
 		return
 	_action_lock_until_ms = Time.get_ticks_msec() + int(maxf(lock_seconds, 0.05) * 1000.0)
+	if is_using_fallback():
+		_call_fallback("play_attack", [lock_seconds])
+		return
 	_play_one_shot(attack_tokens)
 
 func play_death() -> void:
 	_death_locked = true
 	_action_lock_until_ms = 0
+	if is_using_fallback():
+		_call_fallback("play_death")
+		return
 	_play_one_shot(death_tokens)
 
 func reset_state() -> void:
 	_death_locked = false
 	_action_lock_until_ms = 0
 	_current_animation = &""
+	if is_using_fallback():
+		_call_fallback("reset_state")
+		return
 	play_idle()
 
 func _instantiate_model() -> void:
@@ -147,8 +164,6 @@ func _normalize_height() -> void:
 
 	var scale_factor := target_height / bounds.size.y
 	_model_root.scale = Vector3.ONE * scale_factor
-	# Entity pivots are centered in their collision capsules. Align the model's
-	# lowest point to the same local Y used by the primitive fallback feet.
 	_model_root.position.y = feet_y - bounds.position.y * scale_factor
 
 func _calculate_bounds(root_node: Node3D) -> Dictionary:
@@ -166,11 +181,7 @@ func _calculate_bounds(root_node: Node3D) -> Dictionary:
 		for x in [0.0, 1.0]:
 			for y in [0.0, 1.0]:
 				for z in [0.0, 1.0]:
-					var local_point := box.position + Vector3(
-						box.size.x * x,
-						box.size.y * y,
-						box.size.z * z
-					)
+					var local_point := box.position + Vector3(box.size.x * x, box.size.y * y, box.size.z * z)
 					var point := to_adapter * local_point
 					if not found:
 						combined = AABB(point, Vector3.ZERO)
@@ -235,6 +246,11 @@ func _play_one_shot(tokens: PackedStringArray) -> void:
 	_animation_player.stop()
 	_animation_player.play(animation_name, 0.08)
 	_current_animation = animation_name
+
+func _call_fallback(method: StringName, args: Array = []) -> void:
+	if not is_instance_valid(_fallback) or not _fallback.has_method(method):
+		return
+	_fallback.callv(method, args)
 
 func _set_fallback_visible(is_visible: bool) -> void:
 	if is_instance_valid(_fallback):

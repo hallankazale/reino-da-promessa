@@ -71,7 +71,6 @@ func _ready() -> void:
 	_show_region("Acampamento do Peregrino")
 
 func _apply_visual_polish() -> void:
-	# Keep the tracker useful without occupying a large chunk of the world view.
 	quest_panel.offset_left = -258.0
 	quest_panel.offset_top = 106.0
 	quest_panel.offset_right = -14.0
@@ -80,7 +79,6 @@ func _apply_visual_polish() -> void:
 	quest_progress.add_theme_font_size_override("font_size", 9)
 	quest_objective.add_theme_font_size_override("font_size", 8)
 
-	# Controls stay subtle, but a shadow makes them readable over grass or road.
 	help_label.add_theme_color_override("font_color", Color(0.88, 0.9, 0.93, 0.88))
 	help_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.86))
 	help_label.add_theme_constant_override("shadow_offset_x", 1)
@@ -159,15 +157,16 @@ func _on_quest_changed(title: String, objective: String, progress: int, goal: in
 	quest_panel.visible = true
 	quest_panel.modulate.a = 1.0
 	quest_title.text = title if not title.is_empty() else "Missao"
+
 	match state:
 		"Disponivel":
-			quest_progress.text = "Fale com Eliabe"
-			quest_objective.text = "Uma tarefa espera no acampamento."
-		"Concluida":
-			quest_progress.text = "CONCLUIDA"
-			quest_objective.text = "Passagem das ruinas liberada."
+			quest_progress.text = "NOVA MISSAO"
+			quest_objective.text = objective
+		"Jornada concluida":
+			quest_progress.text = "CAPITULO CONCLUIDO"
+			quest_objective.text = objective
 			_quest_tween = create_tween()
-			_quest_tween.tween_interval(3.5)
+			_quest_tween.tween_interval(4.5)
 			_quest_tween.tween_property(quest_panel, "modulate:a", 0.0, 0.35)
 			_quest_tween.tween_callback(func(): quest_panel.visible = false)
 		_:
