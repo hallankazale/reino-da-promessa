@@ -1,9 +1,11 @@
 extends Node3D
 class_name KnightFallbackVisual
 
-## Lightweight animation for the procedural knight. It keeps the player readable
-## on weak hardware while preserving the same semantic animation API used by
-## imported models.
+## Stable procedural fallback plus bootstrap for the curated KayKit Knight.
+## The fallback remains in the scene as a safety net, but production rendering
+## upgrades to the rigged/animated CC0 model after all player nodes are ready.
+
+const KAYKIT_KNIGHT: PackedScene = preload("res://assets/third_party/kaykit_adventurers/Knight.glb")
 
 @onready var owner_body: CharacterBody3D = get_parent() as CharacterBody3D
 @onready var left_arm: Node3D = $LeftArmPivot
@@ -16,6 +18,17 @@ var _phase := 0.0
 var _attack_remaining := 0.0
 var _attack_duration := 0.45
 var _dead := false
+
+func _ready() -> void:
+	call_deferred("_activate_imported_knight")
+
+func _activate_imported_knight() -> void:
+	var adapter := get_node_or_null("../VisualAdapter")
+	if adapter == null:
+		return
+	adapter.set("use_imported_model", true)
+	if adapter.has_method("configure"):
+		adapter.configure(KAYKIT_KNIGHT, 1.82, 180.0, -0.92)
 
 func _process(delta: float) -> void:
 	if _dead:
