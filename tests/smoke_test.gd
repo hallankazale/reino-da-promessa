@@ -21,10 +21,14 @@ func _run_tests() -> void:
 		"res://scenes/player/player.tscn",
 		"res://scenes/enemies/enemy_base.tscn",
 		"res://scenes/npcs/eliabe.tscn",
+		"res://scenes/npcs/miriam.tscn",
+		"res://scenes/npcs/benaya.tscn",
 		"res://scripts/player/player_controller.gd",
 		"res://scripts/enemies/enemy_base.gd",
 		"res://scripts/art/model_adapter.gd",
+		"res://scripts/art/knight_fallback.gd",
 		"res://scripts/npcs/quest_giver.gd",
+		"res://scripts/npcs/story_npc.gd",
 		"res://scripts/quests/quest_manager.gd",
 		"res://scripts/world/first_region_builder.gd",
 		"res://scripts/world/second_region_builder.gd",
@@ -62,6 +66,7 @@ func _run_tests() -> void:
 	await process_frame
 	await process_frame
 	await process_frame
+	await process_frame
 
 	var player := main_instance.get_node_or_null("Player")
 	var inventory := main_instance.get_node_or_null("Player/Inventory")
@@ -70,6 +75,8 @@ func _run_tests() -> void:
 	var hud := main_instance.get_node_or_null("HUD")
 	var quest_manager := main_instance.get_node_or_null("QuestManager")
 	var eliabe := main_instance.get_node_or_null("Eliabe")
+	var miriam := main_instance.get_node_or_null("Miriam")
+	var benaya := main_instance.get_node_or_null("Benaya")
 	var first_region := main_instance.get_node_or_null("FirstRegion")
 	var second_region := main_instance.get_node_or_null("SecondRegion")
 	var gate := main_instance.get_node_or_null("RegionGate")
@@ -96,10 +103,13 @@ func _run_tests() -> void:
 		failures.append("HUD modular nao possui seus paineis essenciais")
 	if quest_manager == null:
 		failures.append("QuestManager nao foi instanciado")
-	if eliabe == null:
-		failures.append("Eliabe nao foi instanciado")
-	elif not eliabe.has_method("get_interaction_prompt"):
-		failures.append("Eliabe nao expoe prompt contextual")
+
+	for npc in [eliabe, miriam, benaya]:
+		if npc == null:
+			failures.append("NPC de historia ausente")
+		elif not npc.has_method("get_interaction_prompt"):
+			failures.append("%s nao expoe prompt contextual" % npc.name)
+
 	if first_region == null:
 		failures.append("Primeira regiao nao foi instanciada")
 	elif first_region.get_node_or_null("Ground") == null:
@@ -117,13 +127,13 @@ func _run_tests() -> void:
 		failures.append("RegionGate nao expoe prompt contextual")
 	if quest_title == null or region_label == null:
 		failures.append("HUD nao possui labels essenciais")
-	if enemies.size() != 3:
-		failures.append("Esperados 3 inimigos, encontrados %d" % enemies.size())
-	if interactables.size() < 3:
-		failures.append("Esperados NPC + duas passagens como interactables")
+	if enemies.size() != 5:
+		failures.append("Esperados 5 inimigos, encontrados %d" % enemies.size())
+	if interactables.size() < 5:
+		failures.append("Esperados 3 NPCs + 2 passagens como interactables")
 
 	if player != null:
-		_validate_visual_adapter(player, "jogador")
+		_validate_player_knight(player)
 
 	for enemy in enemies:
 		_validate_visual_adapter(enemy, enemy.get_display_name() if enemy.has_method("get_display_name") else enemy.name)
@@ -135,8 +145,8 @@ func _run_tests() -> void:
 		await _test_pickup_interaction(main_instance, player, inventory)
 		_test_loot_table()
 
-	if player != null and quest_manager != null and gate != null and return_gate != null and enemies.size() == 3:
-		_test_world_progression(player, quest_manager, enemies, gate, return_gate)
+	if player != null and inventory != null and quest_manager != null and gate != null and return_gate != null and eliabe != null and miriam != null and benaya != null:
+		_test_story_progression(player, inventory, quest_manager, enemies, gate, return_gate)
 
 	main_instance.queue_free()
 	await process_frame
@@ -204,6 +214,27 @@ func _test_loot_table() -> void:
 	if not found_gold or not found_shard:
 		failures.append("Demonio das Ruinas nao gerou seu loot garantido")
 
+	var shade_drops := LOOT_TABLE.roll("spring_shade", rng)
+	var shade_has_gold := false
+	for drop in shade_drops:
+		if drop.has("gold"):
+			shade_has_gold = true
+	if not shade_has_gold:
+		failures.append("Sombra da Fonte deveria gerar ouro")
+
+func _validate_player_knight(player: Node) -> void:
+	_validate_visual_adapter(player, "jogador")
+	var visual := player.get_node_or_null("Visual")
+	if visual == null:
+		failures.append("Cavaleiro nao possui visual procedural")
+		return
+	for child_path in ["Cape", "Helmet", "LeftArmPivot/Shield", "RightArmPivot/SwordBlade"]:
+		if visual.get_node_or_null(child_path) == null:
+			failures.append("Cavaleiro sem componente visual: %s" % child_path)
+	for method in ["play_attack", "play_death", "reset_state"]:
+		if not visual.has_method(method):
+			failures.append("Cavaleiro nao expoe animacao semantica: %s" % method)
+
 func _validate_visual_adapter(entity: Node, entity_label: String) -> void:
 	var adapter := entity.get_node_or_null("VisualAdapter")
 	if adapter == null:
@@ -232,44 +263,87 @@ func _validate_visual_adapter(entity: Node, entity_label: String) -> void:
 	else:
 		print("ART OK %s: %s" % [entity_label, ", ".join(animations)])
 
-func _test_world_progression(player: Node, quest_manager: Node, enemies: Array[Node], gate: Node, return_gate: Node) -> void:
+func _test_story_progression(player: Node, inventory: Node, quest_manager: Node, enemies: Array[Node], gate: Node, return_gate: Node) -> void:
+	inventory.clear()
 	var initial_position: Vector3 = player.global_position
 	if gate.has_method("is_unlocked") and gate.is_unlocked():
 		failures.append("Passagem iniciou desbloqueada antes da missao")
+	if quest_manager.get_npc_marker("eliabe") != "!":
+		failures.append("Eliabe deveria iniciar com marcador de nova missao")
 
 	gate.interact(player)
 	if player.global_position.distance_to(initial_position) > 0.05:
 		failures.append("Passagem moveu o jogador antes da missao ser concluida")
 
-	quest_manager.interact_with_quest_giver()
-	if quest_manager.quest_state != 1:
-		failures.append("Missao nao entrou no estado ACTIVE")
+	quest_manager.interact_with_npc("eliabe")
+	if quest_manager.quest_state != 1 or quest_manager.get_current_quest_id() != "clear_path":
+		failures.append("Primeira missao nao iniciou corretamente")
 
+	var first_region_enemies: Array[Node] = []
+	var spring_shades: Array[Node] = []
 	for enemy in enemies:
+		if String(enemy.enemy_kind) == "spring_shade":
+			spring_shades.append(enemy)
+		else:
+			first_region_enemies.append(enemy)
+
+	for enemy in first_region_enemies:
 		enemy.defeated.emit(enemy.enemy_kind)
 
-	if quest_manager.progress != 3:
-		failures.append("Progresso da missao deveria ser 3, atual %d" % quest_manager.progress)
-	if quest_manager.quest_state != 2:
-		failures.append("Missao nao entrou no estado READY_TO_TURN_IN")
+	if quest_manager.progress != 3 or quest_manager.quest_state != 2:
+		failures.append("Limpe o Caminho nao chegou ao estado de entrega")
+	if quest_manager.get_npc_marker("eliabe") != "?":
+		failures.append("Eliabe deveria mostrar marcador de entrega")
 
-	quest_manager.interact_with_quest_giver()
-	if quest_manager.quest_state != 3:
-		failures.append("Missao nao entrou no estado COMPLETED")
-	if player.level < 2:
-		failures.append("Recompensa da missao nao gerou progressao esperada")
+	quest_manager.interact_with_npc("eliabe")
+	if not quest_manager.is_quest_completed("clear_path"):
+		failures.append("Limpe o Caminho nao foi registrada como concluida")
+	if quest_manager.get_current_quest_id() != "spring_shadows" or quest_manager.quest_state != 0:
+		failures.append("Cadeia nao avancou para A Fonte Profanada")
 	if gate.has_method("is_unlocked") and not gate.is_unlocked():
-		failures.append("Passagem nao desbloqueou apos concluir a missao")
+		failures.append("Passagem nao desbloqueou apos a primeira missao")
+	if quest_manager.get_npc_marker("miriam") != "!":
+		failures.append("Miriam deveria receber marcador da segunda missao")
 
 	gate.interact(player)
 	var valley_spawn := Vector3(120.0, 1.15, 22.0)
 	if player.global_position.distance_to(valley_spawn) > 0.10:
 		failures.append("Jogador nao chegou ao Vale das Fontes")
 
+	quest_manager.interact_with_npc("miriam")
+	if quest_manager.quest_state != 1:
+		failures.append("A Fonte Profanada nao iniciou")
+	for shade in spring_shades:
+		shade.defeated.emit(shade.enemy_kind)
+	if quest_manager.progress != 2 or quest_manager.quest_state != 2:
+		failures.append("Sombras da Fonte nao completaram a segunda missao")
+	quest_manager.interact_with_npc("miriam")
+	if not quest_manager.is_quest_completed("spring_shadows"):
+		failures.append("A Fonte Profanada nao foi concluida")
+	if quest_manager.get_current_quest_id() != "watch_weapons":
+		failures.append("Cadeia nao avancou para Armas para a Vigilia")
+	if quest_manager.get_npc_marker("benaya") != "!":
+		failures.append("Benaya deveria receber marcador da terceira missao")
+
 	return_gate.interact(player)
 	var ruins_return := Vector3(0.0, 1.15, -34.0)
 	if player.global_position.distance_to(ruins_return) > 0.10:
 		failures.append("Passagem de retorno nao levou o jogador as Ruinas Antigas")
+
+	inventory.add_item("bone_fragment", 2)
+	inventory.add_item("ruin_shard", 1)
+	quest_manager.interact_with_npc("benaya")
+	if quest_manager.quest_state != 2:
+		failures.append("Missao de Benaya deveria ficar pronta com materiais existentes")
+	quest_manager.interact_with_npc("benaya")
+	if not quest_manager.is_quest_completed("watch_weapons"):
+		failures.append("Armas para a Vigilia nao foi concluida")
+	if quest_manager.quest_state != 3 or quest_manager.get_current_quest_id() != "":
+		failures.append("Cadeia de tres missoes nao finalizou")
+	if inventory.count_item("bone_fragment") != 0 or inventory.count_item("ruin_shard") != 0:
+		failures.append("Materiais da missao de Benaya nao foram consumidos")
+	if inventory.gold < 33:
+		failures.append("Recompensas de ouro da cadeia nao foram aplicadas")
 
 func _check_resource(path: String) -> void:
 	if load(path) == null:
@@ -277,7 +351,7 @@ func _check_resource(path: String) -> void:
 
 func _finish() -> void:
 	if failures.is_empty():
-		print("SMOKE TEST OK: gameplay, arte, HUD modular, regioes, inventario e loot validados.")
+		print("SMOKE TEST OK: cavaleiro, 3 NPCs, cadeia de 3 missoes, arte, regioes, inventario e loot validados.")
 		quit(0)
 		return
 
