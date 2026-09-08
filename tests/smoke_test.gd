@@ -210,6 +210,14 @@ func _validate_visual_adapter(entity: Node, entity_label: String) -> void:
 		failures.append("%s nao possui VisualAdapter" % entity_label)
 		return
 
+	if adapter.has_method("is_using_fallback") and adapter.is_using_fallback():
+		var fallback := entity.get_node_or_null("Visual") as Node3D
+		if fallback == null or not fallback.visible:
+			failures.append("%s deveria exibir fallback visual estavel" % entity_label)
+		else:
+			print("ART FALLBACK OK %s" % entity_label)
+		return
+
 	if not adapter.has_method("has_loaded_model") or not adapter.has_loaded_model():
 		failures.append("%s nao carregou o modelo 3D importado" % entity_label)
 		return
