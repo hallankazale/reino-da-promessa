@@ -1,0 +1,58 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/region_gate.gd" id="1_gate"]
+
+[sub_resource type="BoxMesh" id="BarrierMesh"]
+size = Vector3(2.8, 3.0, 0.18)
+
+[sub_resource type="BoxShape3D" id="BarrierShape"]
+size = Vector3(2.8, 3.0, 0.18)
+
+[sub_resource type="StandardMaterial3D" id="BarrierMaterial"]
+albedo_color = Color(0.30, 0.29, 0.28, 1)
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="PortalMesh"]
+size = Vector3(2.65, 2.9, 0.06)
+
+[sub_resource type="StandardMaterial3D" id="PortalMaterial"]
+albedo_color = Color(0.16, 0.48, 0.68, 1)
+emission_enabled = true
+emission = Color(0.08, 0.58, 0.92, 1)
+emission_energy_multiplier = 2.2
+roughness = 0.3
+
+[node name="RegionGate" type="Node3D"]
+script = ExtResource("1_gate")
+
+[node name="LockedBarrier" type="StaticBody3D" parent="."]
+position = Vector3(0, 1.55, 0)
+
+[node name="BarrierVisual" type="MeshInstance3D" parent="LockedBarrier"]
+mesh = SubResource("BarrierMesh")
+material_override = SubResource("BarrierMaterial")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="LockedBarrier"]
+shape = SubResource("BarrierShape")
+
+[node name="PortalPlane" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.55, 0.02)
+mesh = SubResource("PortalMesh")
+material_override = SubResource("PortalMaterial")
+visible = false
+
+[node name="PortalLight" type="OmniLight3D" parent="."]
+position = Vector3(0, 1.6, 0.8)
+light_color = Color(0.22, 0.67, 1, 1)
+light_energy = 1.6
+omni_range = 5.5
+shadow_enabled = false
+visible = false
+
+[node name="Label" type="Label3D" parent="."]
+position = Vector3(0, 3.45, 0)
+text = "Passagem Selada"
+billboard = 1
+font_size = 22
+outline_size = 5
+modulate = Color(0.78, 0.68, 0.52, 1)
