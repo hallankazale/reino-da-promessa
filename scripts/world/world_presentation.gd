@@ -38,6 +38,7 @@ func _add_instanced_grass(region: Node3D) -> void:
 	mesh.material = material
 
 	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.mesh = mesh
 	multimesh.instance_count = 88
 
@@ -74,6 +75,7 @@ func _add_instanced_pebbles(region: Node3D) -> void:
 	mesh.material = material
 
 	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.mesh = mesh
 	multimesh.instance_count = 34
 
