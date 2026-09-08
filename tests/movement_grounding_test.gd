@@ -25,7 +25,7 @@ func _run_tests() -> void:
 		failures.append("Player ausente no teste de movimento")
 	else:
 		_validate_player_facing(player)
-		_validate_model_root_stability(player)
+		await _validate_model_root_stability(player)
 
 	for npc_name in ["Eliabe", "Benaya", "Miriam"]:
 		var npc := main_instance.get_node_or_null(npc_name) as Node3D
