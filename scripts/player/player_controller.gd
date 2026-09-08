@@ -6,6 +6,8 @@ signal target_changed(target: Node3D)
 signal died
 signal respawned
 
+const DAMAGE_POPUP_SCENE: PackedScene = preload("res://scenes/ui/damage_popup.tscn")
+
 @export_category("Movement")
 @export var move_speed: float = 4.5
 @export var acceleration: float = 12.0
@@ -174,6 +176,7 @@ func take_damage(amount: int, _attacker: Node = null) -> void:
 	if not _is_alive or amount <= 0:
 		return
 
+	_spawn_damage_popup(amount, Color(1.0, 0.30, 0.24, 1.0))
 	current_health = maxi(current_health - amount, 0)
 	health_changed.emit(current_health, max_health)
 
@@ -229,6 +232,19 @@ func _respawn() -> void:
 		visual_adapter.reset_state()
 	health_changed.emit(current_health, max_health)
 	respawned.emit()
+
+func _spawn_damage_popup(amount: int, tint: Color) -> void:
+	var popup := DAMAGE_POPUP_SCENE.instantiate()
+	if not popup is Node3D:
+		popup.queue_free()
+		return
+	var parent_node: Node = get_tree().current_scene
+	if parent_node == null:
+		parent_node = get_parent()
+	parent_node.add_child(popup)
+	(popup as Node3D).global_position = global_position + Vector3(0, 2.0, 0)
+	if popup.has_method("show_value"):
+		popup.show_value(amount, tint)
 
 func _emit_full_state() -> void:
 	health_changed.emit(current_health, max_health)

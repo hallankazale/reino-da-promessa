@@ -5,6 +5,8 @@ signal defeated(enemy_kind: String)
 signal died
 signal respawned
 
+const DAMAGE_POPUP_SCENE: PackedScene = preload("res://scenes/ui/damage_popup.tscn")
+
 @export_category("Identity")
 @export var display_name: String = "Criatura Hostil"
 @export var enemy_kind: String = "hostile"
@@ -96,6 +98,7 @@ func take_damage(amount: int, attacker: Node = null) -> void:
 	if not _is_alive or amount <= 0:
 		return
 
+	_spawn_damage_popup(amount, Color(1.0, 0.78, 0.25, 1.0))
 	current_health = maxi(current_health - amount, 0)
 	_health_ui_timer = maxf(health_ui_linger, 0.0)
 	_set_health_ui_visible(true)
@@ -240,3 +243,16 @@ func _update_health_ui() -> void:
 	health_label.text = "HP %d/%d" % [current_health, max_health]
 	health_fill.scale.x = maxf(health_ratio, 0.001)
 	health_fill.position.x = -0.59 * (1.0 - health_ratio)
+
+func _spawn_damage_popup(amount: int, tint: Color) -> void:
+	var popup := DAMAGE_POPUP_SCENE.instantiate()
+	if not popup is Node3D:
+		popup.queue_free()
+		return
+	var parent_node: Node = get_tree().current_scene
+	if parent_node == null:
+		parent_node = get_parent()
+	parent_node.add_child(popup)
+	(popup as Node3D).global_position = global_position + Vector3(0, 1.8, 0)
+	if popup.has_method("show_value"):
+		popup.show_value(amount, tint)

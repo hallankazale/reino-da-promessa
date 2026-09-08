@@ -4,47 +4,59 @@ RPG 3D original de fantasia bíblica épica com sensação de MMORPG clássico. 
 
 ## Estado atual
 
-O jogo já possui um primeiro loop de RPG jogável em Godot 4.7.x com foco em hardware fraco:
+O jogo já possui um vertical slice jogável em Godot 4.7.x com foco em hardware fraco:
 
-- GDScript;
-- GL Compatibility;
-- resolução-base 960×540;
+- GDScript + GL Compatibility;
 - movimento WASD relativo à câmera;
-- câmera estilo MMORPG;
+- câmera estilo MMORPG com zoom e rotação;
 - seleção de alvo com TAB;
-- ataque com ESPAÇO;
-- interação com E;
-- HP do jogador e inimigos;
-- inimigos perseguem e contra-atacam;
-- morte e respawn;
-- XP e level-up;
-- HUD com vida, XP, nível, alvo, missão e mensagens;
-- primeira região jogável;
-- NPC com missão;
-- ciclo completo de aceitar → cumprir → entregar missão;
-- personagem do jogador com modelo 3D animado CC0;
-- três inimigos com modelos e animações próprios;
-- adaptação automática de idle, movimento, ataque e morte;
-- fallback visual simples preservado durante desenvolvimento;
-- smoke test headless validando gameplay, assets e animações.
+- ataque com ESPAÇO e interação com E;
+- HP, morte, respawn, XP e level-up;
+- HUD compacto com vida, XP, nível, alvo, missão e região;
+- números de dano flutuantes;
+- personagem e três inimigos com modelos/animações CC0;
+- NPC Eliabe e ciclo completo de missão;
+- primeira região redesenhada com cenário procedural leve;
+- passagem bloqueada por progresso de quest;
+- segunda área explorável: Vale das Fontes;
+- ida e volta entre regiões sem resetar o jogador;
+- smoke test headless validando gameplay, assets, missão e transição entre regiões.
 
-## Primeira região
+## Mundo atual
 
-A jornada começa no **Acampamento do Peregrino**, segue pelo **Caminho dos Olivais** e termina nas **Ruínas Antigas**.
+### Região 1 — Acampamento do Peregrino
 
-Inimigos atuais:
+Fluxo:
+
+**Acampamento do Peregrino → Caminho dos Olivais → Ruínas Antigas**.
+
+Inimigos:
 
 1. **Espectro do Ermo** — rápido e fraco;
 2. **Esqueleto Saqueador** — dificuldade intermediária;
 3. **Demônio das Ruínas** — mais resistente e perigoso.
 
-NPC atual:
+NPC:
 
 - **Eliabe — Guardião do Acampamento**.
 
-Primeira missão:
+Missão:
 
 - **Limpe o Caminho** — fale com Eliabe, derrote 3 criaturas hostis, retorne ao acampamento e receba XP.
+
+Após entregar a missão, a passagem das Ruínas Antigas é desbloqueada.
+
+### Região 2 — Vale das Fontes
+
+Primeira área de expansão do mundo. Atualmente funciona como zona segura de exploração com:
+
+- riacho;
+- ponte de pedra;
+- vegetação própria;
+- santuário da fonte;
+- passagem de retorno às Ruínas Antigas.
+
+Ela existe para validar crescimento regional mantendo estado do jogador no mesmo mundo.
 
 ## Controles
 
@@ -53,18 +65,20 @@ Primeira missão:
 | Mover | WASD |
 | Selecionar inimigo próximo | TAB |
 | Atacar | ESPAÇO |
-| Interagir / falar | E |
+| Interagir / falar / atravessar passagem | E |
+| Girar câmera | botão direito + mouse |
+| Zoom | roda do mouse |
 
 ## Estrutura
 
 ```text
 assets/
-  third_party/
-    quaternius/
+  third_party/quaternius/
 scenes/
   enemies/
   npcs/
   player/
+  ui/
   world/
 scripts/
   art/
@@ -82,15 +96,11 @@ tests/
   smoke_test.gd
 ```
 
-A arquitetura completa e o roadmap estão em `docs/ARCHITECTURE.md`.
-
 ## Assets
 
-Os primeiros quatro modelos animados são de **Quaternius**, distribuídos em **CC0** e registrados em `assets/ATTRIBUTION.md` com origem, transformação conhecida e SHA-256.
+Os modelos animados atuais são de **Quaternius**, distribuídos em **CC0** e registrados em `assets/ATTRIBUTION.md` com origem e SHA-256.
 
-O projeto mantém um importador reprodutível em `scripts/import_cc0_art.sh`. Nenhum modelo, mapa, textura, som ou personagem extraído de Talisman Online ou de outro jogo comercial é usado.
-
-O terreno, tendas, oliveiras, fogueira e ruínas ainda são geometria procedural leve. A troca do cenário será feita separadamente para podermos medir impacto de desempenho antes/depois.
+O ambiente continua majoritariamente procedural para manter download e custo de renderização baixos. Nenhum modelo, mapa, textura, som ou personagem extraído de Talisman Online ou de outro jogo comercial é usado.
 
 ## Teste rápido
 
@@ -98,32 +108,30 @@ Abra `project.godot` no Godot 4.7.x e execute o projeto.
 
 ### Smoke test headless
 
-Antes do smoke test em um clone novo, importe os recursos externos:
-
 ```bash
 godot --headless --path . --import
 godot --headless --path . --script tests/smoke_test.gd
 ```
 
-O teste automatizado verifica:
+O teste automatizado valida:
 
-1. carregamento das cenas e scripts;
+1. cenas, scripts e inputs;
 2. importação dos quatro GLBs CC0;
-3. presença de animações nos modelos;
-4. instanciação da primeira região;
-5. presença de Eliabe e dos três inimigos;
-6. sistema de interação;
-7. início e progresso da missão;
-8. entrega da missão;
-9. recompensa e progressão do jogador.
+3. animações do jogador e inimigos;
+4. primeira e segunda regiões;
+5. Eliabe e os três inimigos;
+6. missão completa e recompensa;
+7. passagem trancada antes da missão;
+8. desbloqueio após conclusão;
+9. ida ao Vale das Fontes e retorno às Ruínas Antigas.
 
 ## Próximo marco
 
-**Cenário modular + feedback de combate**:
+**RPG sistêmico — loot + inventário**:
 
-- substituir tendas, oliveiras e ruínas procedurais por um conjunto visual otimizado;
-- manter proxies de colisão simples e separados da arte;
-- adicionar feedback de dano e impacto;
-- melhorar leitura visual do alvo selecionado;
-- preparar portal/saída para a segunda região;
-- medir desempenho antes de aumentar densidade do mapa.
+- drops por inimigo;
+- inventário desacoplado da UI;
+- itens comuns e equipamentos;
+- moeda do jogo;
+- feedback ao coletar loot;
+- preparação para loja/ferreiro e save local.

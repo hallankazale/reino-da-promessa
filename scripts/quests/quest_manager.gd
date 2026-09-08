@@ -28,12 +28,12 @@ func interact_with_quest_giver() -> void:
 		QuestState.NOT_STARTED:
 			_start_quest()
 		QuestState.ACTIVE:
-			message_changed.emit("Eliabe: O caminho ainda nao esta seguro. Continue atento.")
+			announce("Eliabe: O caminho ainda nao esta seguro. Continue atento.")
 			publish_state()
 		QuestState.READY_TO_TURN_IN:
 			_complete_quest()
 		QuestState.COMPLETED:
-			message_changed.emit("Eliabe: Voce cumpriu sua palavra. O acampamento esta mais seguro.")
+			announce("Eliabe: Voce cumpriu sua palavra. A passagem nas ruinas agora esta aberta.")
 			publish_state()
 
 func publish_state() -> void:
@@ -45,10 +45,16 @@ func publish_state() -> void:
 		_state_label()
 	)
 
+func announce(message: String) -> void:
+	message_changed.emit(message)
+
+func is_first_quest_completed() -> bool:
+	return quest_state == QuestState.COMPLETED
+
 func _start_quest() -> void:
 	quest_state = QuestState.ACTIVE
 	progress = 0
-	message_changed.emit("Nova missao: derrote 3 criaturas no Caminho dos Olivais.")
+	announce("Nova missao: derrote 3 criaturas no Caminho dos Olivais.")
 	publish_state()
 
 func _complete_quest() -> void:
@@ -56,7 +62,7 @@ func _complete_quest() -> void:
 	var player := get_tree().get_first_node_in_group("player")
 	if is_instance_valid(player) and player.has_method("add_xp"):
 		player.add_xp(QUEST_REWARD_XP)
-	message_changed.emit("Missao concluida! Recompensa: %d XP." % QUEST_REWARD_XP)
+	announce("Missao concluida! Recompensa: %d XP. A passagem nas ruinas foi liberada." % QUEST_REWARD_XP)
 	publish_state()
 
 func _connect_enemy_signals() -> void:
@@ -71,9 +77,9 @@ func _on_enemy_defeated(_enemy_kind: String) -> void:
 	progress = mini(progress + 1, QUEST_GOAL)
 	if progress >= QUEST_GOAL:
 		quest_state = QuestState.READY_TO_TURN_IN
-		message_changed.emit("Objetivo concluido. Volte e fale com Eliabe.")
+		announce("Objetivo concluido. Volte e fale com Eliabe.")
 	else:
-		message_changed.emit("Progresso da missao: %d/%d criaturas derrotadas." % [progress, QUEST_GOAL])
+		announce("Progresso da missao: %d/%d criaturas derrotadas." % [progress, QUEST_GOAL])
 	publish_state()
 
 func _state_label() -> String:

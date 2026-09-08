@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://cmku3jefj1gmb"]
+[gd_scene load_steps=19 format=3 uid="uid://cmku3jefj1gmb"]
 
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/enemy_base.tscn" id="2_enemy"]
@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" path="res://assets/third_party/quaternius/wasteland_specter.glb" id="7_specter"]
 [ext_resource type="PackedScene" path="res://assets/third_party/quaternius/skeleton_raider.glb" id="8_skeleton"]
 [ext_resource type="PackedScene" path="res://assets/third_party/quaternius/ruins_demon.glb" id="9_demon"]
+[ext_resource type="PackedScene" path="res://scenes/world/second_region.tscn" id="10_second"]
+[ext_resource type="PackedScene" path="res://scenes/world/region_gate.tscn" id="11_gate"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -65,6 +67,9 @@ shadow_enabled = true
 
 [node name="FirstRegion" parent="." instance=ExtResource("4_region")]
 
+[node name="SecondRegion" parent="." instance=ExtResource("10_second")]
+position = Vector3(120, 0, 0)
+
 [node name="QuestManager" type="Node" parent="."]
 script = ExtResource("6_quests")
 
@@ -74,6 +79,16 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 23)
 [node name="Eliabe" parent="." instance=ExtResource("5_eliabe")]
 position = Vector3(-3.8, 0.95, 20.5)
 rotation_degrees = Vector3(0, 145, 0)
+
+[node name="RegionGate" parent="." instance=ExtResource("11_gate")]
+position = Vector3(0, 0, -36.5)
+destination_name = "Vale das Fontes"
+destination_position = Vector3(120, 1.15, 22)
+
+[node name="ReturnGate" parent="." instance=ExtResource("11_gate")]
+position = Vector3(120, 0, 26.5)
+destination_name = "Ruinas Antigas"
+destination_position = Vector3(0, 1.15, -34)
 
 [node name="WastelandSpecter" parent="." instance=ExtResource("2_enemy")]
 position = Vector3(-1.4, 1, 7.0)
