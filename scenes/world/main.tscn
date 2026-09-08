@@ -6,7 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/npcs/eliabe.tscn" id="5_eliabe"]
 [ext_resource type="Script" path="res://scripts/quests/quest_manager.gd" id="6_quests"]
 [ext_resource type="PackedScene" path="res://assets/third_party/quaternius/wasteland_specter.glb" id="7_specter"]
-[ext_resource type="PackedScene" path="res://assets/third_party/quaternius/skeleton_raider.glb" id="8_skeleton"]
+[ext_resource type="PackedScene" path="res://assets/third_party/kaykit_adventurers/Rogue_Hooded.glb" id="8_skeleton"]
 [ext_resource type="PackedScene" path="res://assets/third_party/quaternius/ruins_demon.glb" id="9_demon"]
 [ext_resource type="PackedScene" path="res://scenes/world/second_region.tscn" id="10_second"]
 [ext_resource type="PackedScene" path="res://scenes/world/region_gate.tscn" id="11_gate"]
@@ -89,12 +89,13 @@ respawn_delay = 6.0
 
 [node name="SkeletonRaider" parent="." instance=ExtResource("2_enemy")]
 position = Vector3(1.8, 1, -8.0)
-display_name = "Esqueleto Saqueador"
+display_name = "Saqueador Sombrio"
 enemy_kind = "skeleton_raider"
-body_color = Color(0.52, 0.46, 0.36, 1)
+body_color = Color(0.18, 0.16, 0.22, 1)
 visual_scene = ExtResource("8_skeleton")
-visual_target_height = 1.58
-visual_feet_y = -0.7
+visual_target_height = 1.72
+visual_feet_y = 0.0
+visual_yaw_degrees = 180.0
 max_health = 38
 xp_reward = 12
 attack_damage = 7

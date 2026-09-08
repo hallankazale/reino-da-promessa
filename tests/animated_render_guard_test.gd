@@ -17,23 +17,35 @@ func _run() -> void:
 	for _frame in range(5):
 		await process_frame
 
-	var skeleton := main_instance.get_node_or_null("SkeletonRaider")
-	if skeleton == null:
-		failures.append("SkeletonRaider ausente")
+	# Mantemos o nome interno SkeletonRaider por compatibilidade com saves/testes e
+	# enemy_kind/loot. A apresentacao, porem, nao pode mais usar o GLB defeituoso.
+	var raider := main_instance.get_node_or_null("SkeletonRaider")
+	if raider == null:
+		failures.append("Raider de compatibilidade ausente")
 	else:
-		await _validate_skeleton_visual(skeleton)
+		await _validate_raider_visual(raider)
 
 	main_instance.queue_free()
 	await process_frame
 	_finish()
 
-func _validate_skeleton_visual(skeleton: Node) -> void:
-	var adapter := skeleton.get_node_or_null("VisualAdapter")
+func _validate_raider_visual(raider: Node) -> void:
+	var visual_scene := raider.get("visual_scene") as PackedScene
+	if visual_scene == null:
+		failures.append("Saqueador nao possui visual_scene")
+		return
+	var visual_path := visual_scene.resource_path
+	if visual_path.contains("skeleton_raider.glb"):
+		failures.append("GLB skeleton_raider quebrado voltou ao gameplay")
+	if not visual_path.contains("kaykit_adventurers/Rogue_Hooded.glb"):
+		failures.append("Saqueador deveria usar Rogue_Hooded KayKit; atual: %s" % visual_path)
+
+	var adapter := raider.get_node_or_null("VisualAdapter")
 	if adapter == null:
-		failures.append("Esqueleto sem VisualAdapter")
+		failures.append("Saqueador sem VisualAdapter")
 		return
 	if not adapter.has_method("has_loaded_model") or not adapter.has_loaded_model():
-		failures.append("Esqueleto nao carregou o GLB")
+		failures.append("Saqueador nao carregou o GLB substituto")
 		return
 	if not adapter.has_method("get_render_guard_mesh_count"):
 		failures.append("ModelAdapter nao expoe protecao de culling")
@@ -41,17 +53,17 @@ func _validate_skeleton_visual(skeleton: Node) -> void:
 
 	var guarded_count := int(adapter.get_render_guard_mesh_count())
 	if guarded_count <= 0:
-		failures.append("Nenhuma mesh do esqueleto recebeu render guard")
+		failures.append("Nenhuma mesh do saqueador recebeu render guard")
 
 	var imported := adapter.get_node_or_null("ImportedModel")
 	if imported == null:
-		failures.append("ImportedModel do esqueleto ausente")
+		failures.append("ImportedModel do saqueador ausente")
 		return
 
 	var meshes: Array[MeshInstance3D] = []
 	_collect_meshes(imported, meshes)
 	if meshes.is_empty():
-		failures.append("Esqueleto importado nao possui MeshInstance3D")
+		failures.append("Saqueador importado nao possui MeshInstance3D")
 		return
 
 	for mesh_instance in meshes:
@@ -62,32 +74,28 @@ func _validate_skeleton_visual(skeleton: Node) -> void:
 		if mesh_instance.custom_aabb.size.length() <= mesh_instance.get_aabb().size.length():
 			failures.append("AABB nao foi expandido: %s" % mesh_instance.name)
 
-	# O bug real do SkeletonRaider vinha do corpo skinned escapando da entidade
-	# enquanto a arma rigida permanecia no lugar. Validamos que o root bone do rig
-	# fica ancorado mesmo que uma animacao tente desloca-lo.
 	var skeleton_nodes: Array[Skeleton3D] = []
 	_collect_skeletons(imported, skeleton_nodes)
 	if skeleton_nodes.is_empty():
-		failures.append("SkeletonRaider importado nao possui Skeleton3D")
+		failures.append("Saqueador KayKit nao possui Skeleton3D")
 		return
 
 	if not adapter.has_method("get_skeleton_root_anchor_count") or int(adapter.get_skeleton_root_anchor_count()) <= 0:
-		failures.append("ModelAdapter nao capturou root bone do SkeletonRaider")
+		failures.append("ModelAdapter nao capturou root bone do saqueador")
 		return
 
 	var rig := skeleton_nodes[0]
 	var root_bone := _find_root_bone(rig)
 	if root_bone < 0:
-		failures.append("SkeletonRaider nao possui bone raiz")
+		failures.append("Saqueador nao possui bone raiz")
 		return
 
 	var anchored_root_position := rig.get_bone_pose_position(root_bone)
 	rig.set_bone_pose_position(root_bone, anchored_root_position + Vector3(4.0, 2.0, -3.0))
 	await process_frame
 	if rig.get_bone_pose_position(root_bone).distance_to(anchored_root_position) > 0.001:
-		failures.append("Root bone do esqueleto nao foi estabilizado")
+		failures.append("Root bone do saqueador nao foi estabilizado")
 
-	# Reproduz as trocas de animacao mais comuns do bug observado: locomocao + ataque.
 	if adapter.has_method("play_move"):
 		adapter.play_move()
 	for _frame in range(8):
@@ -95,7 +103,7 @@ func _validate_skeleton_visual(skeleton: Node) -> void:
 	if adapter.has_method("are_loaded_meshes_visible") and not adapter.are_loaded_meshes_visible():
 		failures.append("Mesh desapareceu durante locomocao")
 	if rig.get_bone_pose_position(root_bone).distance_to(anchored_root_position) > 0.001:
-		failures.append("Locomocao deslocou o root bone do esqueleto")
+		failures.append("Locomocao deslocou o root bone do saqueador")
 
 	if adapter.has_method("play_attack"):
 		adapter.play_attack(0.35)
@@ -104,7 +112,7 @@ func _validate_skeleton_visual(skeleton: Node) -> void:
 	if adapter.has_method("are_loaded_meshes_visible") and not adapter.are_loaded_meshes_visible():
 		failures.append("Mesh desapareceu durante ataque")
 	if rig.get_bone_pose_position(root_bone).distance_to(anchored_root_position) > 0.001:
-		failures.append("Ataque deslocou o root bone do esqueleto")
+		failures.append("Ataque deslocou o root bone do saqueador")
 
 func _find_root_bone(skeleton: Skeleton3D) -> int:
 	for bone_index in range(skeleton.get_bone_count()):
