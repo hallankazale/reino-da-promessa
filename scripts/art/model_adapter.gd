@@ -3,7 +3,7 @@ class_name ModelAdapter
 
 ## Bridges gameplay entities to imported animated 3D models.
 ## Gameplay only calls semantic methods (attack/death/reset); this component
-## owns model instantiation, scale normalization and animation-name discovery.
+## owns model instantiation, scale normalization, facing and animation discovery.
 
 @export_category("Model")
 @export var model_scene: PackedScene
@@ -12,6 +12,7 @@ class_name ModelAdapter
 @export var feet_y: float = -0.9
 @export var yaw_degrees: float = 0.0
 @export var fallback_path: NodePath
+@export var stabilize_model_root: bool = true
 
 @export_category("Animation discovery")
 @export var idle_tokens: PackedStringArray = PackedStringArray(["idle", "stand"])
@@ -26,6 +27,9 @@ var _fallback: Node3D = null
 var _action_lock_until_ms: int = 0
 var _death_locked: bool = false
 var _current_animation: StringName = &""
+var _model_anchor_position := Vector3.ZERO
+var _model_anchor_rotation := Vector3.ZERO
+var _model_anchor_scale := Vector3.ONE
 
 func _ready() -> void:
 	if not String(fallback_path).is_empty():
@@ -43,6 +47,10 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if is_using_fallback():
 		return
+
+	if stabilize_model_root:
+		_restore_model_root_transform()
+
 	if not auto_locomotion or _animation_player == null or _death_locked:
 		return
 	if Time.get_ticks_msec() < _action_lock_until_ms:
@@ -68,6 +76,25 @@ func configure(scene: PackedScene, height: float, yaw: float = 0.0, local_feet_y
 		return
 	if is_node_ready():
 		_instantiate_model()
+
+## Faces the presentation toward a world-space movement direction without rotating
+## the CharacterBody3D. Godot's gameplay forward is -Z; yaw_degrees remains only
+## the imported asset correction inside this adapter.
+func face_direction(direction: Vector3, delta: float = 0.0, turn_speed: float = 10.0) -> void:
+	var flat_direction := Vector3(direction.x, 0.0, direction.z)
+	if flat_direction.length_squared() <= 0.0001:
+		return
+	flat_direction = flat_direction.normalized()
+
+	var target_yaw := atan2(-flat_direction.x, -flat_direction.z)
+	var weight := 1.0 if delta <= 0.0 else minf(maxf(turn_speed, 0.0) * delta, 1.0)
+	rotation.y = lerp_angle(rotation.y, target_yaw, weight)
+
+	if is_using_fallback() and is_instance_valid(_fallback):
+		_fallback.rotation.y = rotation.y
+
+func get_facing_yaw() -> float:
+	return rotation.y
 
 func has_loaded_model() -> bool:
 	return is_instance_valid(_model_root)
@@ -117,6 +144,7 @@ func reset_state() -> void:
 	if is_using_fallback():
 		_call_fallback("reset_state")
 		return
+	_restore_model_root_transform()
 	play_idle()
 
 func _instantiate_model() -> void:
@@ -145,6 +173,7 @@ func _instantiate_model() -> void:
 	_model_root.rotation_degrees = Vector3(0.0, yaw_degrees, 0.0)
 
 	_normalize_height()
+	_capture_model_root_transform()
 	_animation_player = _find_animation_player(_model_root)
 	_set_fallback_visible(false)
 	call_deferred("play_idle")
@@ -165,6 +194,20 @@ func _normalize_height() -> void:
 	var scale_factor := target_height / bounds.size.y
 	_model_root.scale = Vector3.ONE * scale_factor
 	_model_root.position.y = feet_y - bounds.position.y * scale_factor
+
+func _capture_model_root_transform() -> void:
+	if not is_instance_valid(_model_root):
+		return
+	_model_anchor_position = _model_root.position
+	_model_anchor_rotation = _model_root.rotation
+	_model_anchor_scale = _model_root.scale
+
+func _restore_model_root_transform() -> void:
+	if not is_instance_valid(_model_root):
+		return
+	_model_root.position = _model_anchor_position
+	_model_root.rotation = _model_anchor_rotation
+	_model_root.scale = _model_anchor_scale
 
 func _calculate_bounds(root_node: Node3D) -> Dictionary:
 	var found := false

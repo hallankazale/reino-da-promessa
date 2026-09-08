@@ -42,6 +42,10 @@ func _ready() -> void:
 	_spawn_transform = global_transform
 	current_health = max_health
 	add_to_group("player")
+	# A fisica nunca gira para acompanhar a arte. O adaptador visual assume a
+	# orientacao do cavaleiro e preserva a camera/colisao completamente desacopladas.
+	if visual_adapter != null and visual_adapter.has_method("face_direction"):
+		visual_adapter.face_direction(Vector3(0.0, 0.0, -1.0), 0.0, turn_speed)
 	_emit_full_state()
 
 func _physics_process(delta: float) -> void:
@@ -78,9 +82,11 @@ func _handle_movement(delta: float) -> void:
 	else:
 		velocity.y -= gravity_force * delta
 
+	# O CharacterBody3D fica neutro. Somente o visual olha para a direcao em que
+	# o jogador realmente se desloca, evitando o duplo giro do KayKit + yaw local.
 	if desired_direction.length_squared() > 0.001:
-		var target_angle := atan2(desired_direction.x, desired_direction.z)
-		rotation.y = lerp_angle(rotation.y, target_angle, minf(turn_speed * delta, 1.0))
+		if visual_adapter != null and visual_adapter.has_method("face_direction"):
+			visual_adapter.face_direction(desired_direction, delta, turn_speed)
 
 	move_and_slide()
 
@@ -147,6 +153,10 @@ func _attack_selected_target() -> void:
 	var distance := global_position.distance_to(selected_target.global_position)
 	if distance > attack_range:
 		return
+
+	var to_target := selected_target.global_position - global_position
+	if visual_adapter != null and visual_adapter.has_method("face_direction"):
+		visual_adapter.face_direction(to_target, 0.0, turn_speed)
 
 	_attack_cooldown_remaining = attack_cooldown
 	if visual_adapter != null and visual_adapter.has_method("play_attack"):
@@ -230,6 +240,8 @@ func _respawn() -> void:
 	visible = true
 	if visual_adapter != null and visual_adapter.has_method("reset_state"):
 		visual_adapter.reset_state()
+	if visual_adapter != null and visual_adapter.has_method("face_direction"):
+		visual_adapter.face_direction(Vector3(0.0, 0.0, -1.0), 0.0, turn_speed)
 	health_changed.emit(current_health, max_health)
 	respawned.emit()
 

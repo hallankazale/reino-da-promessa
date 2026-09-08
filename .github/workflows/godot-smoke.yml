@@ -43,3 +43,11 @@ jobs:
             --headless \
             --path . \
             --script tests/smoke_test.gd
+
+      - name: Run movement and grounding regression
+        shell: bash
+        run: |
+          .godot-bin/Godot_v4.7.2-stable_linux.x86_64 \
+            --headless \
+            --path . \
+            --script tests/movement_grounding_test.gd
