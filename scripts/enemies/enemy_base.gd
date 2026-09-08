@@ -16,6 +16,7 @@ signal respawned
 @export var visual_feet_y: float = -0.7
 @export var visual_yaw_degrees: float = 0.0
 @export var death_visual_delay: float = 0.55
+@export var health_ui_linger: float = 2.0
 
 @export_category("Combat")
 @export var max_health: int = 30
@@ -34,6 +35,8 @@ signal respawned
 var current_health: int = 0
 var _attack_cooldown_remaining: float = 0.0
 var _is_alive: bool = true
+var _is_selected: bool = false
+var _health_ui_timer: float = 0.0
 var _spawn_transform: Transform3D
 
 @onready var body: MeshInstance3D = $Body
@@ -41,6 +44,7 @@ var _spawn_transform: Transform3D
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var name_label: Label3D = $NameLabel
 @onready var health_label: Label3D = $HealthLabel
+@onready var health_bar: Node3D = $HealthBar
 @onready var health_fill: MeshInstance3D = $HealthBar/Fill
 @onready var selection_marker: MeshInstance3D = $SelectionMarker
 
@@ -50,11 +54,13 @@ func _ready() -> void:
 	add_to_group("enemies")
 	name_label.text = display_name
 	selection_marker.visible = false
+	_set_health_ui_visible(false)
 	_apply_body_color()
 	_configure_visual()
 	_update_health_ui()
 
 func _physics_process(delta: float) -> void:
+	_update_health_ui_visibility(delta)
 	if not _is_alive:
 		return
 
@@ -91,6 +97,8 @@ func take_damage(amount: int, attacker: Node = null) -> void:
 		return
 
 	current_health = maxi(current_health - amount, 0)
+	_health_ui_timer = maxf(health_ui_linger, 0.0)
+	_set_health_ui_visible(true)
 	_update_health_ui()
 	health_changed.emit(current_health, max_health)
 
@@ -98,7 +106,9 @@ func take_damage(amount: int, attacker: Node = null) -> void:
 		_die(attacker)
 
 func set_selected(is_selected: bool) -> void:
-	selection_marker.visible = is_selected and _is_alive
+	_is_selected = is_selected and _is_alive
+	selection_marker.visible = _is_selected
+	_set_health_ui_visible(_is_selected or _health_ui_timer > 0.0)
 
 func is_alive() -> bool:
 	return _is_alive
@@ -149,8 +159,11 @@ func _die(attacker: Node) -> void:
 		return
 
 	_is_alive = false
+	_is_selected = false
+	_health_ui_timer = 0.0
 	velocity = Vector3.ZERO
 	selection_marker.visible = false
+	_set_health_ui_visible(false)
 	collision_shape.set_deferred("disabled", true)
 	if visual_adapter != null and visual_adapter.has_method("play_death"):
 		visual_adapter.play_death()
@@ -174,8 +187,12 @@ func _respawn() -> void:
 	global_transform = _spawn_transform
 	current_health = max_health
 	_attack_cooldown_remaining = 0.0
+	_health_ui_timer = 0.0
+	_is_selected = false
 	_is_alive = true
 	visible = true
+	selection_marker.visible = false
+	_set_health_ui_visible(false)
 	collision_shape.set_deferred("disabled", false)
 	if visual_adapter != null and visual_adapter.has_method("reset_state"):
 		visual_adapter.reset_state()
@@ -199,6 +216,22 @@ func _apply_body_color() -> void:
 	material.roughness = 0.95
 	body.material_override = material
 
+func _update_health_ui_visibility(delta: float) -> void:
+	if _is_selected:
+		_set_health_ui_visible(true)
+		return
+	if _health_ui_timer <= 0.0:
+		_set_health_ui_visible(false)
+		return
+	_health_ui_timer = maxf(_health_ui_timer - delta, 0.0)
+	_set_health_ui_visible(_health_ui_timer > 0.0)
+
+func _set_health_ui_visible(is_visible: bool) -> void:
+	if is_instance_valid(health_label):
+		health_label.visible = is_visible
+	if is_instance_valid(health_bar):
+		health_bar.visible = is_visible
+
 func _update_health_ui() -> void:
 	var health_ratio := 0.0
 	if max_health > 0:
@@ -206,4 +239,4 @@ func _update_health_ui() -> void:
 
 	health_label.text = "HP %d/%d" % [current_health, max_health]
 	health_fill.scale.x = maxf(health_ratio, 0.001)
-	health_fill.position.x = -0.75 * (1.0 - health_ratio)
+	health_fill.position.x = -0.59 * (1.0 - health_ratio)
