@@ -13,6 +13,7 @@ const ITEM_CATALOG = preload("res://scripts/inventory/item_catalog.gd")
 
 func _ready() -> void:
 	add_to_group("interactables")
+	label.visible = false
 	_refresh()
 
 func _process(delta: float) -> void:
@@ -56,23 +57,26 @@ func interact(player: Node) -> void:
 	quantity = remaining
 	_refresh()
 
+func get_interaction_prompt() -> String:
+	if gold_amount > 0:
+		return "E  Coletar %d ouro" % gold_amount
+	if ITEM_CATALOG.has_item(item_id):
+		return "E  Coletar %s x%d" % [ITEM_CATALOG.display_name(item_id), quantity]
+	return "E  Examinar objeto"
+
 func _refresh() -> void:
 	if gold_amount > 0:
-		label.text = "%d ouro  [E]" % gold_amount
 		_apply_color(Color(0.92, 0.70, 0.16, 1.0))
 		return
 
 	if ITEM_CATALOG.has_item(item_id):
-		label.text = "%s x%d  [E]" % [ITEM_CATALOG.display_name(item_id), quantity]
 		var rarity := String(ITEM_CATALOG.get_item(item_id).get("rarity", "Comum"))
 		_apply_color(Color(0.42, 0.76, 1.0, 1.0) if rarity == "Incomum" else Color(0.78, 0.92, 0.72, 1.0))
 		return
 
-	label.text = "Objeto desconhecido"
 	_apply_color(Color(0.75, 0.75, 0.75, 1.0))
 
 func _apply_color(color: Color) -> void:
-	label.modulate = color
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color.darkened(0.25)
 	material.emission_enabled = true
