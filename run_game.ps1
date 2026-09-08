@@ -21,10 +21,8 @@ function Find-GodotExecutable {
         Select-Object -First 1
 }
 
-$Godot = Find-GodotExecutable
-
-if (-not $Godot) {
-    Write-Host "Godot principal nao encontrado. Baixando Godot $GodotVersion oficial..." -ForegroundColor Yellow
+function Install-ManagedGodot {
+    Write-Host "Baixando Godot $GodotVersion oficial..." -ForegroundColor Yellow
     New-Item -ItemType Directory -Force -Path $ToolsDir | Out-Null
 
     $ZipPath = Join-Path $ToolsDir $GodotZipName
@@ -40,7 +38,13 @@ if (-not $Godot) {
     Write-Host "Download validado. Extraindo Godot..." -ForegroundColor Cyan
     Expand-Archive -LiteralPath $ZipPath -DestinationPath $ToolsDir -Force
     Remove-Item $ZipPath -Force
+}
 
+$Godot = Find-GodotExecutable
+
+if (-not $Godot) {
+    Write-Host "Godot principal nao encontrado." -ForegroundColor Yellow
+    Install-ManagedGodot
     $Godot = Find-GodotExecutable
 }
 
@@ -49,15 +53,33 @@ if (-not $Godot) {
     exit 1
 }
 
+$ConsolePath = Join-Path $Godot.DirectoryName ($Godot.BaseName + "_console.exe")
+if (-not (Test-Path -LiteralPath $ConsolePath)) {
+    Write-Host "O Godot encontrado nao possui o executavel de console necessario para importacao." -ForegroundColor Yellow
+    Write-Host "Instalando uma copia completa e isolada do Godot no projeto..." -ForegroundColor Yellow
+    Install-ManagedGodot
+    $Godot = Find-GodotExecutable
+    $ConsolePath = Join-Path $Godot.DirectoryName ($Godot.BaseName + "_console.exe")
+}
+
+if (-not (Test-Path -LiteralPath $ConsolePath)) {
+    Write-Host "Nao foi possivel localizar o executavel de console do Godot." -ForegroundColor Red
+    exit 1
+}
+
 Write-Host "Godot: $($Godot.FullName)" -ForegroundColor Cyan
+Write-Host "Importador: $ConsolePath" -ForegroundColor DarkCyan
 Write-Host "Projeto: $ProjectPath" -ForegroundColor Cyan
 Write-Host "Importando modelos, texturas e cenas..." -ForegroundColor Yellow
 
-& $Godot.FullName --headless --path $ProjectPath --import
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "A importacao falhou. O jogo nao sera iniciado com assets incompletos." -ForegroundColor Red
-    exit $LASTEXITCODE
+& $ConsolePath --headless --path $ProjectPath --import
+$ImportExitCode = $LASTEXITCODE
+
+if ($ImportExitCode -ne 0) {
+    Write-Host "A importacao falhou com codigo $ImportExitCode. Veja as mensagens acima para identificar o recurso com erro." -ForegroundColor Red
+    Write-Host "O jogo nao sera iniciado com assets incompletos." -ForegroundColor Red
+    exit $ImportExitCode
 }
 
 Write-Host "Importacao concluida. Iniciando Reino da Promessa..." -ForegroundColor Green
-& $Godot.FullName --path $ProjectPath
+Start-Process -FilePath $Godot.FullName -ArgumentList @("--path", $ProjectPath)
