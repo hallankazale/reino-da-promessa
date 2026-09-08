@@ -12,7 +12,7 @@ class_name ModelAdapter
 @export var feet_y: float = -0.9
 @export var yaw_degrees: float = 0.0
 @export var fallback_path: NodePath
-@export var stabilize_model_root: bool = false
+@export var stabilize_model_root: bool = true
 
 @export_category("Animation discovery")
 @export var idle_tokens: PackedStringArray = PackedStringArray(["idle", "stand"])
