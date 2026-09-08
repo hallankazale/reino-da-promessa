@@ -21,7 +21,7 @@ var progress: int = 0
 func _ready() -> void:
 	add_to_group("quest_manager")
 	call_deferred("_connect_enemy_signals")
-	_emit_state()
+	publish_state()
 
 func interact_with_quest_giver() -> void:
 	match quest_state:
@@ -29,18 +29,27 @@ func interact_with_quest_giver() -> void:
 			_start_quest()
 		QuestState.ACTIVE:
 			message_changed.emit("Eliabe: O caminho ainda nao esta seguro. Continue atento.")
-			_emit_state()
+			publish_state()
 		QuestState.READY_TO_TURN_IN:
 			_complete_quest()
 		QuestState.COMPLETED:
 			message_changed.emit("Eliabe: Voce cumpriu sua palavra. O acampamento esta mais seguro.")
-			_emit_state()
+			publish_state()
+
+func publish_state() -> void:
+	quest_changed.emit(
+		QUEST_TITLE,
+		QUEST_OBJECTIVE,
+		progress,
+		QUEST_GOAL,
+		_state_label()
+	)
 
 func _start_quest() -> void:
 	quest_state = QuestState.ACTIVE
 	progress = 0
 	message_changed.emit("Nova missao: derrote 3 criaturas no Caminho dos Olivais.")
-	_emit_state()
+	publish_state()
 
 func _complete_quest() -> void:
 	quest_state = QuestState.COMPLETED
@@ -48,7 +57,7 @@ func _complete_quest() -> void:
 	if is_instance_valid(player) and player.has_method("add_xp"):
 		player.add_xp(QUEST_REWARD_XP)
 	message_changed.emit("Missao concluida! Recompensa: %d XP." % QUEST_REWARD_XP)
-	_emit_state()
+	publish_state()
 
 func _connect_enemy_signals() -> void:
 	for enemy in get_tree().get_nodes_in_group("enemies"):
@@ -65,16 +74,7 @@ func _on_enemy_defeated(_enemy_kind: String) -> void:
 		message_changed.emit("Objetivo concluido. Volte e fale com Eliabe.")
 	else:
 		message_changed.emit("Progresso da missao: %d/%d criaturas derrotadas." % [progress, QUEST_GOAL])
-	_emit_state()
-
-func _emit_state() -> void:
-	quest_changed.emit(
-		QUEST_TITLE,
-		QUEST_OBJECTIVE,
-		progress,
-		QUEST_GOAL,
-		_state_label()
-	)
+	publish_state()
 
 func _state_label() -> String:
 	match quest_state:
