@@ -14,6 +14,14 @@ class_name ModelAdapter
 @export var fallback_path: NodePath
 @export var stabilize_model_root: bool = true
 
+@export_category("Rendering safety")
+## Skinned meshes can leave their bind-pose AABB during combat animations and be
+## incorrectly culled while rigid accessories remain visible. Expand the local
+## bounds and add a world-space margin so animated bodies never disappear.
+@export var prevent_animation_culling: bool = true
+@export var render_guard_multiplier: float = 2.5
+@export var render_guard_world_margin: float = 3.0
+
 @export_category("Animation discovery")
 @export var idle_tokens: PackedStringArray = PackedStringArray(["idle", "stand"])
 @export var move_tokens: PackedStringArray = PackedStringArray(["run", "walk", "move", "flying"])
@@ -30,6 +38,7 @@ var _current_animation: StringName = &""
 var _model_anchor_position := Vector3.ZERO
 var _model_anchor_rotation := Vector3.ZERO
 var _model_anchor_scale := Vector3.ONE
+var _guarded_meshes: Array[MeshInstance3D] = []
 
 func _ready() -> void:
 	if not String(fallback_path).is_empty():
@@ -107,6 +116,23 @@ func get_animation_names() -> PackedStringArray:
 		return PackedStringArray()
 	return _animation_player.get_animation_list()
 
+func get_render_guard_mesh_count() -> int:
+	var count := 0
+	for mesh_instance in _guarded_meshes:
+		if is_instance_valid(mesh_instance):
+			count += 1
+	return count
+
+func are_loaded_meshes_visible() -> bool:
+	if is_using_fallback():
+		return is_instance_valid(_fallback) and _fallback.visible
+	if _guarded_meshes.is_empty():
+		return false
+	for mesh_instance in _guarded_meshes:
+		if is_instance_valid(mesh_instance) and not mesh_instance.visible:
+			return false
+	return true
+
 func play_idle() -> void:
 	_death_locked = false
 	if is_using_fallback():
@@ -145,6 +171,7 @@ func reset_state() -> void:
 		_call_fallback("reset_state")
 		return
 	_restore_model_root_transform()
+	_apply_render_guard()
 	play_idle()
 
 func _instantiate_model() -> void:
@@ -153,6 +180,7 @@ func _instantiate_model() -> void:
 	_model_root = null
 	_animation_player = null
 	_current_animation = &""
+	_guarded_meshes.clear()
 
 	if not use_imported_model or model_scene == null:
 		_set_fallback_visible(true)
@@ -174,6 +202,7 @@ func _instantiate_model() -> void:
 
 	_normalize_height()
 	_capture_model_root_transform()
+	_apply_render_guard()
 	_animation_player = _find_animation_player(_model_root)
 	_set_fallback_visible(false)
 	call_deferred("play_idle")
@@ -208,6 +237,28 @@ func _restore_model_root_transform() -> void:
 	_model_root.position = _model_anchor_position
 	_model_root.rotation = _model_anchor_rotation
 	_model_root.scale = _model_anchor_scale
+
+func _apply_render_guard() -> void:
+	_guarded_meshes.clear()
+	if not prevent_animation_culling or not is_instance_valid(_model_root):
+		return
+
+	var meshes: Array[MeshInstance3D] = []
+	_collect_meshes(_model_root, meshes)
+	for mesh_instance in meshes:
+		if mesh_instance.mesh == null:
+			continue
+
+		# Skinned animation deforms vertices after the static mesh AABB is computed.
+		# Grow in mesh-local units so the protection remains correct even when an
+		# imported pack uses centimeters and ModelAdapter normalizes the root scale.
+		var base_bounds := mesh_instance.get_aabb()
+		var local_margin := maxf(base_bounds.size.length() * maxf(render_guard_multiplier, 0.0), 0.5)
+		mesh_instance.custom_aabb = base_bounds.grow(local_margin)
+		mesh_instance.extra_cull_margin = maxf(mesh_instance.extra_cull_margin, render_guard_world_margin)
+		mesh_instance.ignore_occlusion_culling = true
+		mesh_instance.visible = true
+		_guarded_meshes.append(mesh_instance)
 
 func _calculate_bounds(root_node: Node3D) -> Dictionary:
 	var found := false
