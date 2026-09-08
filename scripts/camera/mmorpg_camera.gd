@@ -2,25 +2,25 @@ extends Node3D
 
 ## Third-person camera tuned for MMORPG readability.
 ## The rig follows the player independently from gameplay while SpringArm3D
-## handles obstacles. The defaults favor environmental visibility over a tight
-## over-the-shoulder frame.
+## handles obstacles. The default framing keeps the avatar clearly visible
+## without sacrificing enough world space to read the route ahead.
 
 @export var target_path: NodePath = NodePath("..")
-@export var follow_height: float = 2.25
+@export var follow_height: float = 1.75
 @export var mouse_sensitivity: float = 0.003
-@export var min_pitch_deg: float = -58.0
-@export var max_pitch_deg: float = 18.0
-@export var min_zoom: float = 5.0
-@export var max_zoom: float = 10.5
-@export var default_zoom: float = 7.6
-@export var zoom_step: float = 0.65
+@export var min_pitch_deg: float = -50.0
+@export var max_pitch_deg: float = 16.0
+@export var min_zoom: float = 3.8
+@export var max_zoom: float = 8.5
+@export var default_zoom: float = 5.35
+@export var zoom_step: float = 0.55
 
 @onready var spring_arm: SpringArm3D = $SpringArm3D
 
 var target: Node3D
 var dragging := false
 var yaw := 0.0
-var pitch := deg_to_rad(-27.0)
+var pitch := deg_to_rad(-18.0)
 
 func _ready() -> void:
 	target = get_node_or_null(target_path) as Node3D
