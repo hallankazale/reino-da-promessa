@@ -1,8 +1,9 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/npcs/quest_giver.gd" id="1_npc"]
 [ext_resource type="Script" path="res://scripts/art/model_adapter.gd" id="2_adapter"]
 [ext_resource type="PackedScene" path="res://assets/third_party/kaykit_adventurers/Rogue_Hooded.glb" id="3_rogue"]
+[ext_resource type="Script" path="res://scripts/world/ground_snap.gd" id="4_ground"]
 
 [sub_resource type="StandardMaterial3D" id="FallbackCloth"]
 albedo_color = Color(0.16, 0.23, 0.31, 1)
@@ -29,6 +30,9 @@ script = ExtResource("1_npc")
 npc_id = "eliabe"
 display_name = "Eliabe"
 interaction_text = "Falar"
+
+[node name="GroundSnap" type="Node" parent="."]
+script = ExtResource("4_ground")
 
 [node name="Visual" type="Node3D" parent="."]
 
