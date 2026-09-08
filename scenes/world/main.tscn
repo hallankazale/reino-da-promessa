@@ -85,6 +85,11 @@ position = Vector3(0, 0, -36.5)
 destination_name = "Vale das Fontes"
 destination_position = Vector3(120, 1.15, 22)
 
+[node name="ReturnGate" parent="." instance=ExtResource("11_gate")]
+position = Vector3(120, 0, 26.5)
+destination_name = "Ruinas Antigas"
+destination_position = Vector3(0, 1.15, -34)
+
 [node name="WastelandSpecter" parent="." instance=ExtResource("2_enemy")]
 position = Vector3(-1.4, 1, 7.0)
 display_name = "Espectro do Ermo"
