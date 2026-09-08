@@ -109,6 +109,7 @@ material_override = SubResource("LeatherMaterial")
 [node name="VisualAdapter" type="Node3D" parent="."]
 script = ExtResource("3_art")
 model_scene = ExtResource("4_guardian")
+use_imported_model = false
 target_height = 1.82
 feet_y = -0.92
 fallback_path = NodePath("../Visual")
