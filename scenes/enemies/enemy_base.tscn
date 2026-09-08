@@ -1,6 +1,7 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/enemies/enemy_base.gd" id="1_enemy"]
+[ext_resource type="Script" path="res://scripts/art/model_adapter.gd" id="2_art"]
 
 [sub_resource type="CapsuleShape3D" id="EnemyCollision"]
 radius = 0.45
@@ -45,6 +46,12 @@ shape = SubResource("EnemyCollision")
 [node name="Body" type="MeshInstance3D" parent="."]
 position = Vector3(0, 0.12, 0)
 mesh = SubResource("EnemyBodyMesh")
+
+[node name="VisualAdapter" type="Node3D" parent="."]
+script = ExtResource("2_art")
+target_height = 1.45
+feet_y = -0.7
+fallback_path = NodePath("../Body")
 
 [node name="SelectionMarker" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.68, 0)
