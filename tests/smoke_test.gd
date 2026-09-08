@@ -16,6 +16,7 @@ func _run_tests() -> void:
 		"res://scenes/world/region_gate.tscn",
 		"res://scenes/ui/damage_popup.tscn",
 		"res://scenes/ui/inventory_panel.tscn",
+		"res://scenes/ui/game_hud.tscn",
 		"res://scenes/loot/world_pickup.tscn",
 		"res://scenes/player/player.tscn",
 		"res://scenes/enemies/enemy_base.tscn",
@@ -28,6 +29,7 @@ func _run_tests() -> void:
 		"res://scripts/world/first_region_builder.gd",
 		"res://scripts/world/second_region_builder.gd",
 		"res://scripts/world/region_gate.gd",
+		"res://scripts/world/world_presentation.gd",
 		"res://scripts/inventory/item_catalog.gd",
 		"res://scripts/inventory/inventory.gd",
 		"res://scripts/loot/loot_table.gd",
@@ -65,14 +67,18 @@ func _run_tests() -> void:
 	var inventory := main_instance.get_node_or_null("Player/Inventory")
 	var loot_manager := main_instance.get_node_or_null("LootManager")
 	var inventory_panel := main_instance.get_node_or_null("InventoryPanel")
+	var hud := main_instance.get_node_or_null("HUD")
 	var quest_manager := main_instance.get_node_or_null("QuestManager")
 	var eliabe := main_instance.get_node_or_null("Eliabe")
 	var first_region := main_instance.get_node_or_null("FirstRegion")
 	var second_region := main_instance.get_node_or_null("SecondRegion")
 	var gate := main_instance.get_node_or_null("RegionGate")
 	var return_gate := main_instance.get_node_or_null("ReturnGate")
-	var quest_label := main_instance.get_node_or_null("HUD/MarginContainer/Panel/VBox/QuestLabel")
-	var region_label := main_instance.get_node_or_null("HUD/MarginContainer/Panel/VBox/RegionLabel")
+	var quest_title := main_instance.get_node_or_null("HUD/QuestPanel/Panel/VBox/Title")
+	var region_label := main_instance.get_node_or_null("HUD/RegionBanner/Panel/Label")
+	var target_panel := main_instance.get_node_or_null("HUD/TargetPanel")
+	var prompt_panel := main_instance.get_node_or_null("HUD/PromptPanel")
+	var player_panel := main_instance.get_node_or_null("HUD/PlayerPanel")
 	var enemies := get_nodes_in_group("enemies")
 	var interactables := get_nodes_in_group("interactables")
 
@@ -86,10 +92,14 @@ func _run_tests() -> void:
 		failures.append("InventoryPanel nao foi instanciado")
 	elif inventory_panel.get_node_or_null("Panel") == null:
 		failures.append("InventoryPanel nao possui painel visual")
+	if hud == null or player_panel == null or target_panel == null or prompt_panel == null:
+		failures.append("HUD modular nao possui seus paineis essenciais")
 	if quest_manager == null:
 		failures.append("QuestManager nao foi instanciado")
 	if eliabe == null:
 		failures.append("Eliabe nao foi instanciado")
+	elif not eliabe.has_method("get_interaction_prompt"):
+		failures.append("Eliabe nao expoe prompt contextual")
 	if first_region == null:
 		failures.append("Primeira regiao nao foi instanciada")
 	elif first_region.get_node_or_null("Ground") == null:
@@ -103,7 +113,9 @@ func _run_tests() -> void:
 			failures.append("Vale das Fontes nao possui ArrivalMarker")
 	if gate == null or return_gate == null:
 		failures.append("Passagens entre regioes nao foram instanciadas")
-	if quest_label == null or region_label == null:
+	elif not gate.has_method("get_interaction_prompt"):
+		failures.append("RegionGate nao expoe prompt contextual")
+	if quest_title == null or region_label == null:
 		failures.append("HUD nao possui labels essenciais")
 	if enemies.size() != 3:
 		failures.append("Esperados 3 inimigos, encontrados %d" % enemies.size())
@@ -159,6 +171,8 @@ func _test_pickup_interaction(main_instance: Node, player: Node, inventory: Node
 	main_instance.add_child(pickup)
 	pickup.configure_item("wisp_essence", 2)
 	await process_frame
+	if not pickup.has_method("get_interaction_prompt"):
+		failures.append("Pickup nao expoe prompt contextual")
 
 	pickup.interact(player)
 	await process_frame
@@ -255,7 +269,7 @@ func _check_resource(path: String) -> void:
 
 func _finish() -> void:
 	if failures.is_empty():
-		print("SMOKE TEST OK: gameplay, arte, regioes, inventario, pickups e loot validados.")
+		print("SMOKE TEST OK: gameplay, arte, HUD modular, regioes, inventario e loot validados.")
 		quit(0)
 		return
 

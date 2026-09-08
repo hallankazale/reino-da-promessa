@@ -15,6 +15,7 @@ signal used(destination_name: String)
 func _ready() -> void:
 	add_to_group("interactables")
 	add_to_group("region_gates")
+	label.visible = false
 	call_deferred("_connect_quest_manager")
 	call_deferred("_sync_state")
 
@@ -31,6 +32,9 @@ func interact(player: Node) -> void:
 		(body as CharacterBody3D).velocity = Vector3.ZERO
 	_announce("Voce chegou a: %s." % destination_name)
 	used.emit(destination_name)
+
+func get_interaction_prompt() -> String:
+	return "E  Ir para %s" % destination_name if _is_unlocked() else "E  Examinar passagem selada"
 
 func is_unlocked() -> bool:
 	return _is_unlocked()
@@ -51,8 +55,6 @@ func _sync_state() -> void:
 	barrier_collision.set_deferred("disabled", unlocked)
 	portal_plane.visible = unlocked
 	portal_light.visible = unlocked
-	label.text = "%s  [E]" % destination_name if unlocked else "Passagem Selada"
-	label.modulate = Color(0.74, 0.95, 1.0, 1.0) if unlocked else Color(0.78, 0.68, 0.52, 1.0)
 
 func _is_unlocked() -> bool:
 	var quest_manager := _quest_manager()
