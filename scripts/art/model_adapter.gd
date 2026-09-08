@@ -7,6 +7,7 @@ class_name ModelAdapter
 
 @export_category("Model")
 @export var model_scene: PackedScene
+@export var use_imported_model: bool = true
 @export var target_height: float = 1.8
 @export var feet_y: float = -0.9
 @export var yaw_degrees: float = 0.0
@@ -30,8 +31,14 @@ func _ready() -> void:
 	if not String(fallback_path).is_empty():
 		_fallback = get_node_or_null(fallback_path) as Node3D
 
+	if not use_imported_model:
+		_set_fallback_visible(true)
+		return
+
 	if model_scene != null:
 		_instantiate_model()
+	else:
+		_set_fallback_visible(true)
 
 func _process(_delta: float) -> void:
 	if not auto_locomotion or _animation_player == null or _death_locked:
@@ -54,11 +61,17 @@ func configure(scene: PackedScene, height: float, yaw: float = 0.0, local_feet_y
 	target_height = maxf(height, 0.1)
 	yaw_degrees = yaw
 	feet_y = local_feet_y
+	if not use_imported_model:
+		_set_fallback_visible(true)
+		return
 	if is_node_ready():
 		_instantiate_model()
 
 func has_loaded_model() -> bool:
 	return is_instance_valid(_model_root)
+
+func is_using_fallback() -> bool:
+	return not use_imported_model or not is_instance_valid(_model_root)
 
 func get_animation_names() -> PackedStringArray:
 	if _animation_player == null:
@@ -96,7 +109,7 @@ func _instantiate_model() -> void:
 	_animation_player = null
 	_current_animation = &""
 
-	if model_scene == null:
+	if not use_imported_model or model_scene == null:
 		_set_fallback_visible(true)
 		return
 
