@@ -34,8 +34,7 @@ jobs:
           .godot-bin/Godot_v4.7.2-stable_linux.x86_64 \
             --headless \
             --path . \
-            --editor \
-            --quit-after 1
+            --import
 
       - name: Run smoke test
         shell: bash

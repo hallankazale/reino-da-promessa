@@ -1,7 +1,9 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera/mmorpg_camera.gd" id="2_camera"]
+[ext_resource type="Script" path="res://scripts/art/model_adapter.gd" id="3_art"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius/pilgrim_guardian.glb" id="4_guardian"]
 
 [sub_resource type="CapsuleShape3D" id="PlayerCollision"]
 radius = 0.42
@@ -98,6 +100,13 @@ material_override = SubResource("LeatherMaterial")
 position = Vector3(0.19, -0.9, -0.06)
 mesh = SubResource("FootMesh")
 material_override = SubResource("LeatherMaterial")
+
+[node name="VisualAdapter" type="Node3D" parent="."]
+script = ExtResource("3_art")
+model_scene = ExtResource("4_guardian")
+target_height = 1.82
+feet_y = -0.92
+fallback_path = NodePath("../Visual")
 
 [node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("2_camera")
