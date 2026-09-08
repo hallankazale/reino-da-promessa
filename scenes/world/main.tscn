@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://cmku3jefj1gmb"]
+[gd_scene load_steps=19 format=3 uid="uid://cmku3jefj1gmb"]
 
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/enemy_base.tscn" id="2_enemy"]
@@ -14,6 +14,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/inventory_panel.tscn" id="13_inventory_ui"]
 [ext_resource type="PackedScene" path="res://scenes/ui/game_hud.tscn" id="14_game_hud"]
 [ext_resource type="Script" path="res://scripts/world/world_presentation.gd" id="15_presentation"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/miriam.tscn" id="16_miriam"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/benaya.tscn" id="17_benaya"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -49,6 +51,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 23)
 [node name="Eliabe" parent="." instance=ExtResource("5_eliabe")]
 position = Vector3(-3.8, 0.95, 20.5)
 rotation_degrees = Vector3(0, 145, 0)
+
+[node name="Benaya" parent="." instance=ExtResource("17_benaya")]
+position = Vector3(4.6, 0.0, 19.2)
+rotation_degrees = Vector3(0, -145, 0)
+
+[node name="Miriam" parent="." instance=ExtResource("16_miriam")]
+position = Vector3(116.2, 0.0, -15.2)
+rotation_degrees = Vector3(0, 35, 0)
 
 [node name="RegionGate" parent="." instance=ExtResource("11_gate")]
 position = Vector3(0, 0, -36.5)
@@ -110,6 +120,40 @@ attack_cooldown = 1.4
 aggro_range = 10.0
 move_speed = 1.65
 respawn_delay = 9.0
+
+[node name="SpringShadeA" parent="." instance=ExtResource("2_enemy")]
+position = Vector3(113.5, 1.0, -7.0)
+display_name = "Sombra da Fonte"
+enemy_kind = "spring_shade"
+body_color = Color(0.18, 0.42, 0.55, 1)
+visual_scene = ExtResource("7_specter")
+visual_target_height = 1.45
+visual_feet_y = -0.7
+max_health = 34
+xp_reward = 14
+attack_damage = 7
+attack_range = 1.7
+attack_cooldown = 1.25
+aggro_range = 8.0
+move_speed = 2.45
+respawn_delay = 8.0
+
+[node name="SpringShadeB" parent="." instance=ExtResource("2_enemy")]
+position = Vector3(126.0, 1.0, -11.5)
+display_name = "Sombra da Fonte"
+enemy_kind = "spring_shade"
+body_color = Color(0.18, 0.42, 0.55, 1)
+visual_scene = ExtResource("7_specter")
+visual_target_height = 1.45
+visual_feet_y = -0.7
+max_health = 34
+xp_reward = 14
+attack_damage = 7
+attack_range = 1.7
+attack_cooldown = 1.25
+aggro_range = 8.0
+move_speed = 2.45
+respawn_delay = 8.0
 
 [node name="LootManager" type="Node" parent="."]
 script = ExtResource("12_loot")
