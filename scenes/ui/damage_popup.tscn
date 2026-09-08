@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/damage_popup.gd" id="1_popup"]
+
+[node name="DamagePopup" type="Label3D"]
+script = ExtResource("1_popup")
+text = "-10"
+billboard = 1
+font_size = 30
+outline_size = 6
+modulate = Color(1, 0.76, 0.28, 1)
