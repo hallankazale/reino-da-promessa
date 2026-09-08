@@ -7,7 +7,8 @@ extends Node3D
 
 func _ready() -> void:
 	add_to_group("interactables")
-	prompt_label.text = "E - %s" % interaction_text
+	# Prompt 3D permanente poluia a cena. A HUD contextual assume essa funcao.
+	prompt_label.visible = false
 
 func interact(_player: Node) -> void:
 	var quest_manager := get_tree().get_first_node_in_group("quest_manager")
@@ -16,3 +17,6 @@ func interact(_player: Node) -> void:
 
 func get_display_name() -> String:
 	return display_name
+
+func get_interaction_prompt() -> String:
+	return "E  %s com %s" % [interaction_text, display_name]
