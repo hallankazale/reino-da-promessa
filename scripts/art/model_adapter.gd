@@ -8,6 +8,7 @@ class_name ModelAdapter
 @export_category("Model")
 @export var model_scene: PackedScene
 @export var target_height: float = 1.8
+@export var feet_y: float = -0.9
 @export var yaw_degrees: float = 0.0
 @export var fallback_path: NodePath
 
@@ -48,10 +49,11 @@ func _process(_delta: float) -> void:
 	else:
 		play_idle()
 
-func configure(scene: PackedScene, height: float, yaw: float = 0.0) -> void:
+func configure(scene: PackedScene, height: float, yaw: float = 0.0, local_feet_y: float = -0.9) -> void:
 	model_scene = scene
 	target_height = maxf(height, 0.1)
 	yaw_degrees = yaw
+	feet_y = local_feet_y
 	if is_node_ready():
 		_instantiate_model()
 
@@ -132,8 +134,9 @@ func _normalize_height() -> void:
 
 	var scale_factor := target_height / bounds.size.y
 	_model_root.scale = Vector3.ONE * scale_factor
-	# Put the lowest point of the imported mesh on the entity's local ground.
-	_model_root.position.y = -bounds.position.y * scale_factor
+	# Entity pivots are centered in their collision capsules. Align the model's
+	# lowest point to the same local Y used by the primitive fallback feet.
+	_model_root.position.y = feet_y - bounds.position.y * scale_factor
 
 func _calculate_bounds(root_node: Node3D) -> Dictionary:
 	var found := false
