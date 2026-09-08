@@ -40,11 +40,11 @@ func _sync_from_player() -> void:
 	_on_health_changed(player.current_health, player.max_health)
 	_on_stats_changed(player.level, player.xp, player.xp_to_next_level, player.attack_damage)
 	_on_target_changed(player.selected_target)
-	status_label.text = "Explore o acampamento e procure Eliabe."
+	status_label.text = "Procure Eliabe no acampamento."
 
 func _sync_quest() -> void:
 	if quest_manager == null:
-		quest_label.text = "Missao: sistema indisponivel"
+		quest_label.text = "Missao indisponivel"
 		return
 	if quest_manager.has_method("publish_state"):
 		quest_manager.call_deferred("publish_state")
@@ -52,17 +52,17 @@ func _sync_quest() -> void:
 func _on_health_changed(current_health: int, max_health: int) -> void:
 	health_bar.max_value = max_health
 	health_bar.value = current_health
-	health_label.text = "VIDA  %d / %d" % [current_health, max_health]
+	health_label.text = "HP  %d / %d" % [current_health, max_health]
 
 func _on_stats_changed(level: int, xp: int, xp_to_next_level: int, attack_damage: int) -> void:
 	xp_bar.max_value = xp_to_next_level
 	xp_bar.value = xp
 	xp_label.text = "XP  %d / %d" % [xp, xp_to_next_level]
-	stats_label.text = "Nivel %d   |   Ataque %d" % [level, attack_damage]
+	stats_label.text = "Nv.%d   ATQ %d" % [level, attack_damage]
 
 func _on_target_changed(target: Node3D) -> void:
 	if not is_instance_valid(target):
-		target_label.text = "Alvo: nenhum"
+		target_label.text = "Alvo: -"
 		return
 
 	if target.has_method("get_display_name"):
@@ -72,18 +72,20 @@ func _on_target_changed(target: Node3D) -> void:
 
 func _on_quest_changed(title: String, objective: String, progress: int, goal: int, state: String) -> void:
 	if state == "Disponivel":
-		quest_label.text = "Missao disponivel: fale com Eliabe."
+		quest_label.text = "Missao: fale com Eliabe"
 		return
 	if state == "Concluida":
 		quest_label.text = "%s - CONCLUIDA" % title
 		return
-	quest_label.text = "%s | %s | %d/%d | %s" % [title, objective, progress, goal, state]
+	quest_label.text = "%s  %d/%d  %s" % [title, progress, goal, state]
+	if not objective.is_empty():
+		status_label.text = objective
 
 func _on_message_changed(message: String) -> void:
 	status_label.text = message
 
 func _on_player_died() -> void:
-	status_label.text = "Voce caiu em batalha. Retornando ao Acampamento do Peregrino..."
+	status_label.text = "Derrotado. Retornando ao acampamento..."
 
 func _on_player_respawned() -> void:
-	status_label.text = "Voce retornou ao acampamento. Continue a jornada."
+	status_label.text = "De volta ao acampamento."
