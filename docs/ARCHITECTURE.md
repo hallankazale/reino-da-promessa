@@ -10,10 +10,12 @@ Construir um RPG 3D de fantasia bíblica com sensação de MMORPG clássico, com
 2. **Baixo custo de hardware** — GL Compatibility, geometria procedural leve e assets externos selecionados.
 3. **Lógica desacoplada da arte** — combate e IA não dependem de um modelo 3D específico.
 4. **Arte por contrato semântico** — gameplay pede `play_attack()`, `play_death()` etc.; não conhece rigs ou nomes de clips.
-5. **Interação reutilizável** — NPCs, passagens, baús e vendedores usam `interact(player)`.
-6. **Progressão abre o mundo** — regiões podem exigir estado de quest, nível ou item sem duplicar lógica no player.
-7. **Estado contínuo entre regiões** — enquanto o jogo for local, as áreas coexistem no mesmo mundo para preservar XP, HP e progresso sem serialização prematura.
-8. **Multiplayer só depois do vertical slice** — rede entra após profiling e regras de gameplay estabilizadas.
+5. **Interação reutilizável** — NPCs, passagens, pickups, baús e vendedores usam `interact(player)`.
+6. **Progressão abre o mundo** — regiões podem exigir quest, nível ou item sem duplicar lógica no player.
+7. **Domínio não depende de UI** — inventário decide stacks, slots e ouro; painéis apenas apresentam estado.
+8. **Loot não pertence à IA** — inimigos anunciam uma morte; `LootManager` resolve a tabela e cria pickups.
+9. **Estado contínuo entre regiões** — áreas coexistem no mesmo mundo enquanto a escala permitir.
+10. **Multiplayer só depois do vertical slice** — rede entra após profiling e regras de gameplay estabilizadas.
 
 ## Camadas
 
@@ -21,25 +23,27 @@ Construir um RPG 3D de fantasia bíblica com sensação de MMORPG clássico, com
 scenes/
   player/        física + composição do jogador
   enemies/       cena-base reutilizável de hostis
+  loot/          pickups visuais/interativos
   npcs/          NPCs e pontos de interação
-  ui/            feedback visual reutilizável
+  ui/            HUD, inventário e feedback visual
   world/         regiões e passagens
 
 scripts/
-  art/           adaptação de modelos/animações importados
+  art/           adaptação de modelos/animações
   player/        movimento, combate, interação e progressão
   enemies/       IA, dano, morte e respawn
+  inventory/     catálogo, slots, stacks e moeda
+  loot/          tabelas, resolução e pickups
   npcs/          contratos de interação
   quests/        regras e estado de missão
   camera/        câmera MMORPG
-  ui/            HUD e feedback de combate
-  world/         builders procedurais e transições regionais
+  ui/            apresentação e feedback
+  world/         builders e transições regionais
 
 assets/
-  third_party/   conteúdo externo aprovado e rastreado
+  third_party/   conteúdo externo aprovado
   ATTRIBUTION.md procedência/licença
 
-data/            itens, classes, drops e quests quando o volume crescer
 tests/           smoke tests de integração do vertical slice
 ```
 
@@ -48,32 +52,36 @@ tests/           smoke tests de integração do vertical slice
 ```text
 Acampamento do Peregrino
         ↓
-Eliabe entrega "Limpe o Caminho"
+Eliabe → "Limpe o Caminho"
         ↓
-Caminho dos Olivais
+Combate → dano → morte do inimigo
+       ↙                     ↘
+quest defeated             loot_requested
+       ↓                     ↓
+QuestManager              LootManager
+                             ↓
+                         LootTable
+                             ↓
+                        WorldPickup
+                             ↓ E
+                     Player/Inventory
+                             ↓ signals
+                    HUD + InventoryPanel
         ↓
-3 criaturas derrotadas
+Quest concluída → passagem abre
         ↓
-Volta a Eliabe
-        ↓
-Quest concluída + XP
-        ↓
-Passagem das Ruínas é desbloqueada
-        ↓
-Vale das Fontes
-        ↕
-Passagem de retorno às Ruínas Antigas
+Vale das Fontes ↔ Ruínas Antigas
 ```
 
 ## Regiões
 
 ### Região 1 — Acampamento do Peregrino
 
-Contém acampamento, estrada, oliveiras, ruínas, Eliabe e os três inimigos atuais. O cenário é gerado por `first_region_builder.gd` com materiais compartilhados e proxies de colisão simples.
+Contém acampamento, Caminho dos Olivais, Ruínas Antigas, Eliabe e três inimigos. O cenário é procedural, com materiais compartilhados e proxies de colisão simples.
 
 ### Região 2 — Vale das Fontes
 
-Área segura de expansão gerada por `second_region_builder.gd`. Possui riacho, ponte, vegetação e santuário da fonte. Fica fisicamente afastada da primeira região dentro da mesma cena principal para manter estado do jogador sem introduzir save/load antes da hora.
+Área segura com riacho, ponte, vegetação e santuário. Fica fisicamente afastada da primeira região para manter o estado do jogador sem serialização prematura.
 
 ## Contratos principais
 
@@ -83,7 +91,7 @@ Contém acampamento, estrada, oliveiras, ruínas, Eliabe e os três inimigos atu
 interactable.interact(player)
 ```
 
-O player não precisa saber se o objeto é NPC, passagem, baú ou vendedor.
+O player não precisa saber se o objeto é NPC, passagem ou pickup.
 
 ### Gameplay → ModelAdapter
 
@@ -93,46 +101,76 @@ visual_adapter.play_death()
 visual_adapter.reset_state()
 ```
 
-`ModelAdapter` instancia o GLB, normaliza escala, alinha os pés e encontra animações por intenção.
+`ModelAdapter` instancia GLB, normaliza escala, alinha os pés e encontra animações por intenção.
 
 ### Enemy → QuestManager
 
-Inimigos emitem `defeated(enemy_kind)`. O `QuestManager` decide se a morte conta para a missão.
+```text
+defeated(enemy_kind)
+```
+
+`QuestManager` decide se a morte conta para a missão.
+
+### Enemy → LootManager
+
+```text
+loot_requested(enemy_kind, world_position)
+```
+
+A IA não conhece item, chance, ouro ou inventário. `LootManager` consulta `LootTable` e instancia `WorldPickup`.
+
+### WorldPickup → Inventory
+
+Pickup chama apenas:
+
+```text
+inventory.add_item(item_id, quantity)
+inventory.add_gold(amount)
+```
+
+Se o inventário não comportar a pilha inteira, o pickup mantém a quantidade restante no chão.
+
+### Inventory → UI
+
+`PlayerInventory` emite:
+
+```text
+changed
+item_added(item_id, amount)
+gold_changed(total)
+```
+
+`InventoryPanel` e HUD observam esses sinais; nunca alteram diretamente a estrutura de slots.
 
 ### QuestManager → World Progression
 
-O `QuestManager` expõe:
-
-```text
-is_first_quest_completed()
-announce(message)
-```
-
-`RegionGate` consulta apenas essa API pública. A passagem não conhece detalhes internos do enum de quest.
+`RegionGate` consulta `is_first_quest_completed()` e não conhece o enum interno da missão.
 
 ### RegionGate → HUD
 
-Passagens emitem:
-
-```text
-used(destination_name)
-```
-
-O HUD atualiza o nome da região sem controlar teleporte ou regras de desbloqueio.
+Passagens emitem `used(destination_name)`. O HUD atualiza apenas a apresentação da região.
 
 ### Combat → DamagePopup
 
-Player e inimigos instanciam `damage_popup.tscn` ao receber dano. A cena controla animação e descarte do número flutuante; entidades apenas informam valor e cor.
+Player e inimigos instanciam `damage_popup.tscn`. A cena controla animação e descarte; entidades fornecem valor e cor.
+
+## Inventário
+
+O inventário atual possui 20 slots. Cada item define `max_stack` no `ItemCatalog`. A operação `add_item()` tenta primeiro completar pilhas existentes e só então abre novos slots. O retorno é a quantidade que não coube, permitindo que pickups permaneçam parcialmente no mundo.
+
+Ouro é armazenado no mesmo domínio, mas separado dos slots. `spend_gold()` rejeita transações sem saldo suficiente.
+
+## Loot
+
+`LootTable` concentra regras de drop por `enemy_kind`. Isso evita probabilidades espalhadas pelos scripts dos inimigos e prepara o sistema para raridade, bônus de mapa, chefes e tabelas externas depois.
 
 ## Estratégia de mundo
 
-Por enquanto, regiões coexistem em uma única cena e ficam separadas espacialmente. Isso evita reset de estado e simplifica QA.
-
-Quando o número de regiões ou custo de memória justificar, essa camada migra para streaming/carregamento regional. O contrato de `RegionGate` permanece e o destino poderá trocar de posição para um identificador de região carregável.
+Por enquanto, regiões coexistem numa única cena. Quando custo de memória justificar, o contrato de `RegionGate` poderá migrar para streaming regional sem alterar o player ou a UI.
 
 ## Pipeline de assets
 
-Assets externos só entram com licença/origem registradas em `assets/ATTRIBUTION.md`. O CI executa `godot --import` antes do smoke test para garantir que GLBs estejam totalmente importados.
+Assets externos só entram com licença/origem registradas em `assets/ATTRIBUTION.md`. O CI executa `godot --import` antes do smoke test.
 
 ## Roadmap técnico
 
@@ -158,19 +196,26 @@ Assets externos só entram com licença/origem registradas em `assets/ATTRIBUTIO
 - passagem bloqueada por quest
 - Vale das Fontes
 - ida e volta entre regiões
-- teste de integração da progressão regional
 
-### Marco 4 — RPG sistêmico — próximo
-- inventário
-- itens
-- drops
-- moeda
-- equipamentos
-- atributos
-- loja/ferreiro
+### Marco 4 — Inventário + loot ✅
+- catálogo de itens
+- slots e empilhamento
+- ouro
+- tabelas de drop
+- pickups interativos
+- janela de inventário
+- feedback de coleta
+- testes de domínio e integração
+
+### Marco 5 — Equipamentos + persistência — próximo
+- arma e armadura
+- atributos derivados
+- equipar/desequipar pela UI
 - save local versionado
+- restauração de inventário, ouro, nível e equipamentos
+- preparação para ferreiro/loja
 
-### Marco 5 — Conteúdo e identidade
+### Marco 6 — Conteúdo e identidade
 - habilidades
 - VFX/SFX
 - minimapa
@@ -178,7 +223,7 @@ Assets externos só entram com licença/origem registradas em `assets/ATTRIBUTIO
 - primeira dungeon
 - quests persistentes
 
-### Marco 6 — Online
+### Marco 7 — Online
 Somente após profiling e validação offline:
 - servidor autoritativo
 - autenticação
