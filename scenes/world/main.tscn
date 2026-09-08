@@ -1,35 +1,25 @@
-[gd_scene load_steps=11 format=3 uid="uid://cmku3jefj1gmb"]
+[gd_scene load_steps=14 format=3 uid="uid://cmku3jefj1gmb"]
 
-[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/training_enemy.tscn" id="2"]
-[ext_resource type="Script" uid="uid://cyglywrdv8p62" path="res://scripts/ui/hud.gd" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/enemy_base.tscn" id="2_enemy"]
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="3_hud"]
+[ext_resource type="PackedScene" path="res://scenes/world/first_region.tscn" id="4_region"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/eliabe.tscn" id="5_eliabe"]
+[ext_resource type="Script" path="res://scripts/quests/quest_manager.gd" id="6_quests"]
 
-[sub_resource type="Environment" id="4"]
+[sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
 background_color = Color(0.48, 0.66, 0.82, 1)
-ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_energy = 0.7
-
-[sub_resource type="StandardMaterial3D" id="3"]
-albedo_color = Color(0.25, 0.42, 0.22, 1)
-roughness = 1.0
-
-[sub_resource type="PlaneMesh" id="1"]
-size = Vector2(30, 30)
-
-[sub_resource type="BoxShape3D" id="2"]
-size = Vector3(30, 0.2, 30)
-
-[sub_resource type="BoxMesh" id="5"]
-size = Vector3(1.2, 1.2, 1.2)
+ambient_light_color = Color(1, 0.95, 0.86, 1)
+ambient_light_energy = 0.68
 
 [sub_resource type="StyleBoxFlat" id="HUDPanel"]
-bg_color = Color(0.035, 0.045, 0.065, 0.9)
+bg_color = Color(0.035, 0.045, 0.065, 0.91)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.72, 0.58, 0.25, 0.75)
+border_color = Color(0.72, 0.58, 0.25, 0.78)
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
@@ -62,41 +52,76 @@ corner_radius_bottom_left = 4
 
 [node name="Main" type="Node3D" unique_id=1014635209]
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1186915758]
-environment = SubResource("4")
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
 
-[node name="Sun" type="DirectionalLight3D" parent="." unique_id=605568218]
+[node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.81915206, 0.46984634, -0.32898995, 0, 0.57357645, 0.81915206, 0.57357645, -0.6710101, 0.46984634, 0, 0, 0)
+light_energy = 1.05
 shadow_enabled = true
 
-[node name="Ground" type="StaticBody3D" parent="." unique_id=2021344917]
+[node name="FirstRegion" parent="." instance=ExtResource("4_region")]
 
-[node name="Mesh" type="MeshInstance3D" parent="Ground" unique_id=1587238441]
-material_override = SubResource("3")
-mesh = SubResource("1")
+[node name="QuestManager" type="Node" parent="."]
+script = ExtResource("6_quests")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground" unique_id=1126394754]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
-shape = SubResource("2")
+[node name="Player" parent="." instance=ExtResource("1_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 23)
 
-[node name="Player" parent="." unique_id=1768770502 instance=ExtResource("1")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 4)
+[node name="Eliabe" parent="." instance=ExtResource("5_eliabe")]
+position = Vector3(-3.8, 0.95, 20.5)
+rotation_degrees = Vector3(0, 145, 0)
 
-[node name="TrainingEnemy" parent="." unique_id=56216538 instance=ExtResource("2")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+[node name="DesertJackal" parent="." instance=ExtResource("2_enemy")]
+position = Vector3(-1.4, 1, 7.0)
+display_name = "Chacal do Deserto"
+enemy_kind = "desert_jackal"
+body_color = Color(0.62, 0.46, 0.24, 1)
+max_health = 20
+xp_reward = 8
+attack_damage = 4
+attack_range = 1.65
+attack_cooldown = 1.35
+aggro_range = 7.5
+move_speed = 2.8
+respawn_delay = 6.0
 
-[node name="DestinationMarker" type="MeshInstance3D" parent="." unique_id=203992994]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -6)
-mesh = SubResource("5")
+[node name="ValleyRaider" parent="." instance=ExtResource("2_enemy")]
+position = Vector3(1.8, 1, -8.0)
+display_name = "Saqueador do Vale"
+enemy_kind = "valley_raider"
+body_color = Color(0.48, 0.15, 0.12, 1)
+max_health = 38
+xp_reward = 12
+attack_damage = 7
+attack_range = 1.85
+attack_cooldown = 1.15
+aggro_range = 9.0
+move_speed = 2.2
+respawn_delay = 7.0
 
-[node name="HUD" type="CanvasLayer" parent="." unique_id=131706056]
-script = ExtResource("3")
+[node name="RuinGuardian" parent="." instance=ExtResource("2_enemy")]
+position = Vector3(0, 1, -28.0)
+display_name = "Guardiao das Ruinas"
+enemy_kind = "ruin_guardian"
+body_color = Color(0.25, 0.18, 0.32, 1)
+max_health = 60
+xp_reward = 18
+attack_damage = 10
+attack_range = 2.0
+attack_cooldown = 1.4
+aggro_range = 10.0
+move_speed = 1.65
+respawn_delay = 9.0
 
-[node name="MarginContainer" type="MarginContainer" parent="HUD" unique_id=81918997]
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("3_hud")
+
+[node name="MarginContainer" type="MarginContainer" parent="HUD"]
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 426.0
-offset_bottom = 274.0
+offset_right = 476.0
+offset_bottom = 354.0
 
 [node name="Panel" type="PanelContainer" parent="HUD/MarginContainer"]
 layout_mode = 2
@@ -111,6 +136,11 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.82, 0.48, 1)
 theme_override_font_sizes/font_size = 20
 text = "REINO DA PROMESSA"
+
+[node name="RegionLabel" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.78, 0.82, 0.72, 1)
+text = "Acampamento do Peregrino"
 
 [node name="HealthLabel" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
 layout_mode = 2
@@ -144,12 +174,18 @@ text = "Nivel 1   |   Ataque 10"
 layout_mode = 2
 text = "Alvo: nenhum"
 
+[node name="QuestLabel" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
+layout_mode = 2
+autowrap_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.82, 0.48, 1)
+text = "Missao: fale com Eliabe no acampamento."
+
 [node name="StatusLabel" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
 layout_mode = 2
 autowrap_mode = 2
-text = "Explore, selecione um alvo e lute."
+text = "Explore o acampamento e procure Eliabe."
 
 [node name="HelpLabel" type="Label" parent="HUD/MarginContainer/Panel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.74, 0.78, 1)
-text = "WASD mover   |   TAB alvo   |   ESPACO atacar"
+text = "WASD mover | TAB alvo | ESPACO atacar | E interagir"

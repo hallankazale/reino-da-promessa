@@ -4,9 +4,8 @@ RPG 3D original de fantasia bíblica épica com sensação de MMORPG clássico. 
 
 ## Estado atual
 
-O primeiro vertical slice está em construção com foco em hardware fraco:
+O jogo já possui um primeiro loop de RPG jogável em Godot 4.7.x com foco em hardware fraco:
 
-- Godot 4.7.x;
 - GDScript;
 - GL Compatibility;
 - resolução-base 960×540;
@@ -14,15 +13,34 @@ O primeiro vertical slice está em construção com foco em hardware fraco:
 - câmera estilo MMORPG;
 - seleção de alvo com TAB;
 - ataque com ESPAÇO;
-- HP do jogador;
-- HP do inimigo;
-- cooldown de ataque;
-- inimigo contra-ataca;
-- morte e respawn do jogador;
-- morte e respawn do inimigo;
-- recompensa de XP;
-- level-up com aumento de ataque e vida;
-- HUD com vida, XP, nível, alvo e estado.
+- interação com E;
+- HP do jogador e inimigos;
+- inimigos perseguem e contra-atacam;
+- morte e respawn;
+- XP e level-up;
+- HUD com vida, XP, nível, alvo, missão e mensagens;
+- primeira região jogável;
+- NPC com missão;
+- ciclo completo de aceitar → cumprir → entregar missão;
+- smoke test headless com integração do loop principal.
+
+## Primeira região
+
+A jornada começa no **Acampamento do Peregrino**, segue pelo **Caminho dos Olivais** e termina nas **Ruínas Antigas**.
+
+Inimigos atuais:
+
+1. Chacal do Deserto — rápido e fraco;
+2. Saqueador do Vale — dificuldade intermediária;
+3. Guardião das Ruínas — mais resistente e perigoso.
+
+NPC atual:
+
+- **Eliabe — Guardião do Acampamento**.
+
+Primeira missão:
+
+- **Limpe o Caminho** — fale com Eliabe, derrote 3 criaturas hostis, retorne ao acampamento e receba XP.
 
 ## Controles
 
@@ -31,19 +49,24 @@ O primeiro vertical slice está em construção com foco em hardware fraco:
 | Mover | WASD |
 | Selecionar inimigo próximo | TAB |
 | Atacar | ESPAÇO |
+| Interagir / falar | E |
 
 ## Estrutura
 
 ```text
 scenes/
   enemies/
+  npcs/
   player/
   world/
 scripts/
   camera/
   enemies/
+  npcs/
   player/
+  quests/
   ui/
+  world/
 docs/
   ARCHITECTURE.md
   ASSET_POLICY.md
@@ -59,6 +82,8 @@ O projeto só adotará conteúdo externo com licença compatível e origem regis
 
 Não serão usados modelos, mapas, texturas, sons ou personagens extraídos de jogos comerciais.
 
+O cenário atual usa geometria 3D leve de protótipo para validar gameplay e desempenho. A próxima etapa visual substituirá essas primitives por assets CC0 sem alterar a lógica do jogo.
+
 ## Teste rápido
 
 Abra `project.godot` no Godot 4.7.x e execute o projeto.
@@ -69,23 +94,26 @@ Abra `project.godot` no Godot 4.7.x e execute o projeto.
 godot --headless --path . --script tests/smoke_test.gd
 ```
 
-Critérios mínimos:
+O teste automatizado verifica:
 
-1. projeto carrega sem erro de parser/recurso;
-2. WASD movimenta o personagem;
-3. TAB seleciona o inimigo;
-4. ESPAÇO causa dano apenas dentro do alcance;
-5. inimigo contra-ataca quando o jogador aproxima;
-6. morte do inimigo concede XP uma única vez;
-7. inimigo reaparece após o respawn;
-8. XP suficiente aumenta o nível;
-9. morte do player não trava o jogo e ele retorna ao ponto inicial;
-10. HUD acompanha vida, XP, nível e alvo.
+1. carregamento das cenas e scripts;
+2. inputs essenciais;
+3. instanciação da primeira região;
+4. presença de Eliabe;
+5. presença dos três inimigos;
+6. sistema de interação;
+7. início da missão;
+8. progresso após derrotas;
+9. entrega da missão;
+10. recompensa e progressão do jogador.
 
 ## Próximo marco
 
-Transformar o terreno de teste na primeira área jogável:
+**Direção de arte jogável**:
 
-**Acampamento do Peregrino → Caminho dos Olivais → Ruínas Antigas**
-
-Nessa etapa entram personagem animado CC0, cenário modular, três tipos de inimigos e o primeiro NPC com missão.
+- substituir personagem provisório por modelo animado CC0;
+- substituir inimigos provisórios por criaturas/hostis estilizados;
+- trocar tendas, árvores e ruínas por assets modulares otimizados;
+- adicionar animações de idle, caminhada e ataque;
+- manter o jogo leve no GL Compatibility;
+- preparar a saída para a segunda região.

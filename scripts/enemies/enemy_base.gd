@@ -1,0 +1,178 @@
+extends CharacterBody3D
+
+signal health_changed(current_health: int, max_health: int)
+signal defeated(enemy_kind: String)
+signal died
+signal respawned
+
+@export_category("Identity")
+@export var display_name: String = "Criatura Hostil"
+@export var enemy_kind: String = "hostile"
+@export var body_color: Color = Color(0.62, 0.18, 0.15, 1.0)
+
+@export_category("Combat")
+@export var max_health: int = 30
+@export var xp_reward: int = 10
+@export var attack_damage: int = 6
+@export var attack_range: float = 1.8
+@export var attack_cooldown: float = 1.25
+@export var aggro_range: float = 8.0
+@export var respawn_delay: float = 5.0
+
+@export_category("Movement")
+@export var move_speed: float = 2.0
+@export var gravity_force: float = 18.0
+@export var turn_speed: float = 7.0
+
+var current_health: int = 0
+var _attack_cooldown_remaining: float = 0.0
+var _is_alive: bool = true
+var _spawn_transform: Transform3D
+
+@onready var body: MeshInstance3D = $Body
+@onready var collision_shape: CollisionShape3D = $CollisionShape3D
+@onready var name_label: Label3D = $NameLabel
+@onready var health_label: Label3D = $HealthLabel
+@onready var health_fill: MeshInstance3D = $HealthBar/Fill
+@onready var selection_marker: MeshInstance3D = $SelectionMarker
+
+func _ready() -> void:
+	_spawn_transform = global_transform
+	current_health = max_health
+	add_to_group("enemies")
+	name_label.text = display_name
+	selection_marker.visible = false
+	_apply_body_color()
+	_update_health_ui()
+
+func _physics_process(delta: float) -> void:
+	if not _is_alive:
+		return
+
+	_attack_cooldown_remaining = maxf(_attack_cooldown_remaining - delta, 0.0)
+	_apply_gravity(delta)
+
+	var player := get_tree().get_first_node_in_group("player")
+	if not is_instance_valid(player) or not player is Node3D:
+		_stop_horizontal_motion()
+		move_and_slide()
+		return
+	if player.has_method("is_alive") and not player.is_alive():
+		_stop_horizontal_motion()
+		move_and_slide()
+		return
+
+	var distance := global_position.distance_to(player.global_position)
+	if distance > aggro_range:
+		_stop_horizontal_motion()
+		move_and_slide()
+		return
+
+	_face_target(player.global_position, delta)
+	if distance > attack_range:
+		_chase_target(player.global_position)
+	else:
+		_stop_horizontal_motion()
+		_try_attack(player)
+
+	move_and_slide()
+
+func take_damage(amount: int, attacker: Node = null) -> void:
+	if not _is_alive or amount <= 0:
+		return
+
+	current_health = maxi(current_health - amount, 0)
+	_update_health_ui()
+	health_changed.emit(current_health, max_health)
+
+	if current_health <= 0:
+		_die(attacker)
+
+func set_selected(is_selected: bool) -> void:
+	selection_marker.visible = is_selected and _is_alive
+
+func is_alive() -> bool:
+	return _is_alive
+
+func get_display_name() -> String:
+	return display_name
+
+func _chase_target(target_position: Vector3) -> void:
+	var direction := target_position - global_position
+	direction.y = 0.0
+	if direction.length_squared() <= 0.001:
+		_stop_horizontal_motion()
+		return
+
+	direction = direction.normalized()
+	velocity.x = direction.x * move_speed
+	velocity.z = direction.z * move_speed
+
+func _stop_horizontal_motion() -> void:
+	velocity.x = 0.0
+	velocity.z = 0.0
+
+func _apply_gravity(delta: float) -> void:
+	if is_on_floor():
+		velocity.y = 0.0
+	else:
+		velocity.y -= gravity_force * delta
+
+func _face_target(target_position: Vector3, delta: float) -> void:
+	var direction := target_position - global_position
+	direction.y = 0.0
+	if direction.length_squared() <= 0.001:
+		return
+	var target_angle := atan2(direction.x, direction.z)
+	rotation.y = lerp_angle(rotation.y, target_angle, minf(turn_speed * delta, 1.0))
+
+func _try_attack(player: Node) -> void:
+	if _attack_cooldown_remaining > 0.0:
+		return
+	if player.has_method("take_damage"):
+		player.take_damage(attack_damage, self)
+		_attack_cooldown_remaining = attack_cooldown
+
+func _die(attacker: Node) -> void:
+	if not _is_alive:
+		return
+
+	_is_alive = false
+	velocity = Vector3.ZERO
+	selection_marker.visible = false
+	visible = false
+	collision_shape.set_deferred("disabled", true)
+	died.emit()
+	defeated.emit(enemy_kind)
+
+	if attacker != null and attacker.has_method("add_xp"):
+		attacker.add_xp(xp_reward)
+
+	await get_tree().create_timer(respawn_delay).timeout
+	_respawn()
+
+func _respawn() -> void:
+	global_transform = _spawn_transform
+	current_health = max_health
+	_attack_cooldown_remaining = 0.0
+	_is_alive = true
+	visible = true
+	collision_shape.set_deferred("disabled", false)
+	_update_health_ui()
+	health_changed.emit(current_health, max_health)
+	respawned.emit()
+
+func _apply_body_color() -> void:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = body_color
+	material.roughness = 0.95
+	body.material_override = material
+
+func _update_health_ui() -> void:
+	var health_ratio := 0.0
+	if max_health > 0:
+		health_ratio = float(current_health) / float(max_health)
+
+	health_label.text = "HP %d/%d" % [current_health, max_health]
+	health_fill.scale.x = maxf(health_ratio, 0.001)
+	health_fill.position.x = -0.75 * (1.0 - health_ratio)

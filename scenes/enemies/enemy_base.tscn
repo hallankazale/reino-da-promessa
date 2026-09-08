@@ -1,0 +1,80 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_base.gd" id="1_enemy"]
+
+[sub_resource type="CapsuleShape3D" id="EnemyCollision"]
+radius = 0.45
+height = 1.4
+
+[sub_resource type="CapsuleMesh" id="EnemyBodyMesh"]
+radius = 0.45
+height = 1.0
+radial_segments = 12
+rings = 6
+
+[sub_resource type="CylinderMesh" id="SelectionMesh"]
+top_radius = 0.72
+bottom_radius = 0.72
+height = 0.03
+radial_segments = 20
+
+[sub_resource type="StandardMaterial3D" id="SelectionMaterial"]
+albedo_color = Color(1, 0.82, 0.18, 1)
+emission_enabled = true
+emission = Color(0.55, 0.36, 0.04, 1)
+emission_energy_multiplier = 1.2
+
+[sub_resource type="BoxMesh" id="HealthBackMesh"]
+size = Vector3(1.6, 0.12, 0.06)
+
+[sub_resource type="StandardMaterial3D" id="HealthBackMaterial"]
+albedo_color = Color(0.08, 0.08, 0.09, 1)
+
+[sub_resource type="BoxMesh" id="HealthFillMesh"]
+size = Vector3(1.5, 0.08, 0.07)
+
+[sub_resource type="StandardMaterial3D" id="HealthFillMaterial"]
+albedo_color = Color(0.15, 0.82, 0.2, 1)
+
+[node name="EnemyBase" type="CharacterBody3D"]
+script = ExtResource("1_enemy")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("EnemyCollision")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.12, 0)
+mesh = SubResource("EnemyBodyMesh")
+
+[node name="SelectionMarker" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.68, 0)
+mesh = SubResource("SelectionMesh")
+material_override = SubResource("SelectionMaterial")
+visible = false
+
+[node name="NameLabel" type="Label3D" parent="."]
+position = Vector3(0, 1.55, 0)
+text = "Criatura Hostil"
+billboard = 1
+font_size = 28
+outline_size = 6
+modulate = Color(1, 0.95, 0.78, 1)
+
+[node name="HealthLabel" type="Label3D" parent="."]
+position = Vector3(0, 1.22, 0)
+text = "HP 30/30"
+billboard = 1
+font_size = 22
+outline_size = 5
+
+[node name="HealthBar" type="Node3D" parent="."]
+position = Vector3(0, 1.0, 0)
+
+[node name="Background" type="MeshInstance3D" parent="HealthBar"]
+mesh = SubResource("HealthBackMesh")
+material_override = SubResource("HealthBackMaterial")
+
+[node name="Fill" type="MeshInstance3D" parent="HealthBar"]
+position = Vector3(0, 0, -0.01)
+mesh = SubResource("HealthFillMesh")
+material_override = SubResource("HealthFillMaterial")

@@ -20,6 +20,9 @@ signal respawned
 @export var target_search_range: float = 12.0
 @export var respawn_delay: float = 2.0
 
+@export_category("Interaction")
+@export var interaction_range: float = 3.2
+
 var current_health: int
 var level: int = 1
 var xp: int = 0
@@ -48,6 +51,9 @@ func _physics_process(delta: float) -> void:
 
 	if Input.is_action_just_pressed("attack"):
 		_attack_selected_target()
+
+	if Input.is_action_just_pressed("interact"):
+		_interact_with_nearest()
 
 func _handle_movement(delta: float) -> void:
 	var input_vector := Vector2(
@@ -143,6 +149,21 @@ func _attack_selected_target() -> void:
 
 	if is_instance_valid(selected_target) and selected_target.has_method("is_alive") and not selected_target.is_alive():
 		_clear_target()
+
+func _interact_with_nearest() -> void:
+	var nearest: Node3D = null
+	var nearest_distance := interaction_range
+
+	for interactable in get_tree().get_nodes_in_group("interactables"):
+		if not is_instance_valid(interactable) or not interactable is Node3D:
+			continue
+		var distance := global_position.distance_to(interactable.global_position)
+		if distance <= nearest_distance:
+			nearest = interactable
+			nearest_distance = distance
+
+	if is_instance_valid(nearest) and nearest.has_method("interact"):
+		nearest.interact(self)
 
 func take_damage(amount: int, _attacker: Node = null) -> void:
 	if not _is_alive or amount <= 0:
