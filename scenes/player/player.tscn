@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera/mmorpg_camera.gd" id="2_camera"]
 [ext_resource type="Script" path="res://scripts/art/model_adapter.gd" id="3_art"]
-[ext_resource type="PackedScene" path="res://assets/third_party/quaternius/pilgrim_guardian.glb" id="4_guardian"]
+[ext_resource type="PackedScene" path="res://assets/third_party/kaykit_adventurers/Knight.glb" id="4_guardian"]
 [ext_resource type="Script" path="res://scripts/inventory/inventory.gd" id="5_inventory"]
 [ext_resource type="Script" path="res://scripts/art/knight_fallback.gd" id="6_knight"]
 
@@ -223,9 +223,10 @@ material_override = SubResource("LeatherMaterial")
 [node name="VisualAdapter" type="Node3D" parent="."]
 script = ExtResource("3_art")
 model_scene = ExtResource("4_guardian")
-use_imported_model = false
+use_imported_model = true
 target_height = 1.82
 feet_y = -0.92
+yaw_degrees = 180.0
 fallback_path = NodePath("../Visual")
 
 [node name="CameraRig" type="Node3D" parent="."]
