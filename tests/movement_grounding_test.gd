@@ -109,10 +109,14 @@ func _validate_bridge_walkability(main_instance: Node, second_region: Node3D) ->
 		failures.append("Ponte nao possui tabuleiro de colisao continuo")
 		return
 
+	# Godot pode renomear automaticamente o segundo filho com o mesmo nome.
+	# Identificamos as rampas pela funcao fisica: StaticBody inclinado nas duas extremidades.
 	var ramp_count := 0
 	for child in bridge.get_children():
-		if child.name == "BridgeApproachRamp":
-			ramp_count += 1
+		if child is StaticBody3D:
+			var body := child as StaticBody3D
+			if absf(body.rotation_degrees.x) > 1.0 and absf(body.position.z) > 3.0:
+				ramp_count += 1
 	if ramp_count != 2:
 		failures.append("Ponte deveria possuir 2 rampas caminhaveis")
 		return
