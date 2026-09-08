@@ -18,6 +18,7 @@ const ITEM_CATALOG = preload("res://scripts/inventory/item_catalog.gd")
 @onready var target_health_bar: ProgressBar = $TargetPanel/Panel/VBox/HealthBar
 @onready var target_health_label: Label = $TargetPanel/Panel/VBox/HealthLabel
 
+@onready var quest_panel: Control = $QuestPanel
 @onready var quest_title: Label = $QuestPanel/Panel/VBox/Title
 @onready var quest_progress: Label = $QuestPanel/Panel/VBox/Progress
 @onready var quest_objective: Label = $QuestPanel/Panel/VBox/Objective
@@ -28,12 +29,15 @@ const ITEM_CATALOG = preload("res://scripts/inventory/item_catalog.gd")
 @onready var toast_label: Label = $ToastPanel/Panel/Label
 @onready var prompt_panel: Control = $PromptPanel
 @onready var prompt_label: Label = $PromptPanel/Panel/Label
+@onready var help_label: Label = $HelpLabel
 
 var _current_target: Node = null
 var _region_tween: Tween
 var _toast_tween: Tween
+var _quest_tween: Tween
 
 func _ready() -> void:
+	_apply_visual_polish()
 	if player == null:
 		_show_toast("Player nao encontrado", 3.0)
 		return
@@ -65,6 +69,23 @@ func _ready() -> void:
 	_sync_from_player()
 	_sync_quest()
 	_show_region("Acampamento do Peregrino")
+
+func _apply_visual_polish() -> void:
+	# Keep the tracker useful without occupying a large chunk of the world view.
+	quest_panel.offset_left = -258.0
+	quest_panel.offset_top = 106.0
+	quest_panel.offset_right = -14.0
+	quest_panel.offset_bottom = 176.0
+	quest_title.add_theme_font_size_override("font_size", 11)
+	quest_progress.add_theme_font_size_override("font_size", 9)
+	quest_objective.add_theme_font_size_override("font_size", 8)
+
+	# Controls stay subtle, but a shadow makes them readable over grass or road.
+	help_label.add_theme_color_override("font_color", Color(0.88, 0.9, 0.93, 0.88))
+	help_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.86))
+	help_label.add_theme_constant_override("shadow_offset_x", 1)
+	help_label.add_theme_constant_override("shadow_offset_y", 1)
+	help_label.add_theme_font_size_override("font_size", 9)
 
 func _process(_delta: float) -> void:
 	_update_interaction_prompt()
@@ -133,6 +154,10 @@ func _on_target_health_changed(current_health: int, max_health: int) -> void:
 	target_health_label.text = "HP %d/%d" % [current_health, max_health]
 
 func _on_quest_changed(title: String, objective: String, progress: int, goal: int, state: String) -> void:
+	if _quest_tween != null and _quest_tween.is_valid():
+		_quest_tween.kill()
+	quest_panel.visible = true
+	quest_panel.modulate.a = 1.0
 	quest_title.text = title if not title.is_empty() else "Missao"
 	match state:
 		"Disponivel":
@@ -140,7 +165,11 @@ func _on_quest_changed(title: String, objective: String, progress: int, goal: in
 			quest_objective.text = "Uma tarefa espera no acampamento."
 		"Concluida":
 			quest_progress.text = "CONCLUIDA"
-			quest_objective.text = "A passagem das ruinas foi liberada."
+			quest_objective.text = "Passagem das ruinas liberada."
+			_quest_tween = create_tween()
+			_quest_tween.tween_interval(3.5)
+			_quest_tween.tween_property(quest_panel, "modulate:a", 0.0, 0.35)
+			_quest_tween.tween_callback(func(): quest_panel.visible = false)
 		_:
 			quest_progress.text = "%d/%d  %s" % [progress, goal, state]
 			quest_objective.text = objective
