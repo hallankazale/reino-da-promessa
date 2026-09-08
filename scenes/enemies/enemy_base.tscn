@@ -14,25 +14,25 @@ radial_segments = 12
 rings = 6
 
 [sub_resource type="CylinderMesh" id="SelectionMesh"]
-top_radius = 0.72
-bottom_radius = 0.72
-height = 0.03
+top_radius = 0.62
+bottom_radius = 0.62
+height = 0.025
 radial_segments = 20
 
 [sub_resource type="StandardMaterial3D" id="SelectionMaterial"]
-albedo_color = Color(1, 0.82, 0.18, 1)
+albedo_color = Color(1, 0.82, 0.18, 0.88)
 emission_enabled = true
 emission = Color(0.55, 0.36, 0.04, 1)
-emission_energy_multiplier = 1.2
+emission_energy_multiplier = 1.0
 
 [sub_resource type="BoxMesh" id="HealthBackMesh"]
-size = Vector3(1.6, 0.12, 0.06)
+size = Vector3(1.25, 0.08, 0.045)
 
 [sub_resource type="StandardMaterial3D" id="HealthBackMaterial"]
-albedo_color = Color(0.08, 0.08, 0.09, 1)
+albedo_color = Color(0.08, 0.08, 0.09, 0.94)
 
 [sub_resource type="BoxMesh" id="HealthFillMesh"]
-size = Vector3(1.5, 0.08, 0.07)
+size = Vector3(1.18, 0.055, 0.05)
 
 [sub_resource type="StandardMaterial3D" id="HealthFillMaterial"]
 albedo_color = Color(0.15, 0.82, 0.2, 1)
@@ -60,22 +60,24 @@ material_override = SubResource("SelectionMaterial")
 visible = false
 
 [node name="NameLabel" type="Label3D" parent="."]
-position = Vector3(0, 1.55, 0)
+position = Vector3(0, 1.5, 0)
 text = "Criatura Hostil"
 billboard = 1
-font_size = 28
-outline_size = 6
+font_size = 20
+outline_size = 4
 modulate = Color(1, 0.95, 0.78, 1)
 
 [node name="HealthLabel" type="Label3D" parent="."]
 position = Vector3(0, 1.22, 0)
 text = "HP 30/30"
 billboard = 1
-font_size = 22
-outline_size = 5
+font_size = 14
+outline_size = 3
+visible = false
 
 [node name="HealthBar" type="Node3D" parent="."]
-position = Vector3(0, 1.0, 0)
+position = Vector3(0, 1.05, 0)
+visible = false
 
 [node name="Background" type="MeshInstance3D" parent="HealthBar"]
 mesh = SubResource("HealthBackMesh")
