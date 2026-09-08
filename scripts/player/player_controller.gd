@@ -14,6 +14,12 @@ const DAMAGE_POPUP_SCENE: PackedScene = preload("res://scenes/ui/damage_popup.ts
 @export var gravity_force: float = 18.0
 @export var turn_speed: float = 10.0
 
+@export_category("Step traversal")
+## Regra global do projeto: degraus baixos nao podem virar paredes invisiveis.
+## O Player sobe automaticamente superficies com topo caminhavel ate esta altura.
+@export_range(0.10, 0.70, 0.01) var max_step_height: float = 0.45
+@export_range(0.01, 0.20, 0.01) var step_landing_margin: float = 0.04
+
 @export_category("Combat")
 @export var max_health: int = 100
 @export var attack_damage: int = 10
@@ -88,7 +94,63 @@ func _handle_movement(delta: float) -> void:
 		if visual_adapter != null and visual_adapter.has_method("face_direction"):
 			visual_adapter.face_direction(desired_direction, delta, turn_speed)
 
+	# Godot trata a face vertical de um degrau como parede. Antes do movimento
+	# normal, tentamos descobrir se existe um topo caminhavel logo acima dela.
+	# A funcao altera apenas Y; X/Z continuam sendo resolvidos por move_and_slide().
+	var horizontal_motion := Vector3(velocity.x, 0.0, velocity.z) * delta
+	if _try_step_up(horizontal_motion):
+		velocity.y = 0.0
+
 	move_and_slide()
+
+## Sobe um degrau baixo sem adicionar rampas especiais ao mapa.
+## Retorna true somente quando ha obstaculo horizontal, espaco livre acima e um
+## piso caminhavel dentro de max_step_height. Paredes altas continuam bloqueando.
+func _try_step_up(horizontal_motion: Vector3) -> bool:
+	if max_step_height <= 0.0:
+		return false
+	if horizontal_motion.length_squared() <= 0.000001:
+		return false
+	if not is_on_floor():
+		return false
+
+	# Se o movimento horizontal ja esta livre, nao existe degrau para resolver.
+	if not test_move(global_transform, horizontal_motion):
+		return false
+
+	var upward_motion := Vector3.UP * max_step_height
+	# Nao sobe se nao houver espaco para o corpo inteiro.
+	if test_move(global_transform, upward_motion):
+		return false
+
+	var raised_transform := global_transform.translated(upward_motion)
+	if test_move(raised_transform, horizontal_motion):
+		return false
+
+	var raised_forward_transform := raised_transform.translated(horizontal_motion)
+	var down_collision := KinematicCollision3D.new()
+	var down_distance := max_step_height + maxf(floor_snap_length, 0.05) + step_landing_margin
+	if not test_move(
+		raised_forward_transform,
+		Vector3.DOWN * down_distance,
+		down_collision
+	):
+		return false
+
+	var landing_normal := down_collision.get_normal()
+	var min_floor_dot := cos(floor_max_angle)
+	if landing_normal.dot(Vector3.UP) < min_floor_dot:
+		return false
+
+	var landing_transform := raised_forward_transform.translated(down_collision.get_travel())
+	var step_height := landing_transform.origin.y - global_position.y
+	if step_height <= 0.015 or step_height > max_step_height + step_landing_margin:
+		return false
+
+	# Aplicamos somente a subida vertical. O deslocamento horizontal e feito uma
+	# unica vez por move_and_slide(), evitando ganho artificial de velocidade.
+	global_position.y = landing_transform.origin.y
+	return true
 
 func _camera_relative_direction(input_vector: Vector2) -> Vector3:
 	if input_vector == Vector2.ZERO:
