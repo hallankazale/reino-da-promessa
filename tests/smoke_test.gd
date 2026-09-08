@@ -9,6 +9,9 @@ func _run_tests() -> void:
 	var required_resources := [
 		"res://scenes/world/main.tscn",
 		"res://scenes/world/first_region.tscn",
+		"res://scenes/world/second_region.tscn",
+		"res://scenes/world/region_gate.tscn",
+		"res://scenes/ui/damage_popup.tscn",
 		"res://scenes/player/player.tscn",
 		"res://scenes/enemies/enemy_base.tscn",
 		"res://scenes/npcs/eliabe.tscn",
@@ -18,6 +21,9 @@ func _run_tests() -> void:
 		"res://scripts/npcs/quest_giver.gd",
 		"res://scripts/quests/quest_manager.gd",
 		"res://scripts/world/first_region_builder.gd",
+		"res://scripts/world/second_region_builder.gd",
+		"res://scripts/world/region_gate.gd",
+		"res://scripts/ui/damage_popup.gd",
 		"res://scripts/ui/hud.gd",
 		"res://assets/third_party/quaternius/pilgrim_guardian.glb",
 		"res://assets/third_party/quaternius/wasteland_specter.glb",
@@ -40,7 +46,7 @@ func _run_tests() -> void:
 	var main_instance := main_scene.instantiate()
 	root.add_child(main_instance)
 
-	# Permite que _ready, importacao de modelos e chamadas deferred conectem sinais.
+	# Permite que _ready, builders procedurais e chamadas deferred terminem.
 	await process_frame
 	await process_frame
 	await process_frame
@@ -48,8 +54,12 @@ func _run_tests() -> void:
 	var player := main_instance.get_node_or_null("Player")
 	var quest_manager := main_instance.get_node_or_null("QuestManager")
 	var eliabe := main_instance.get_node_or_null("Eliabe")
-	var region := main_instance.get_node_or_null("FirstRegion")
+	var first_region := main_instance.get_node_or_null("FirstRegion")
+	var second_region := main_instance.get_node_or_null("SecondRegion")
+	var gate := main_instance.get_node_or_null("RegionGate")
+	var return_gate := main_instance.get_node_or_null("ReturnGate")
 	var quest_label := main_instance.get_node_or_null("HUD/MarginContainer/Panel/VBox/QuestLabel")
+	var region_label := main_instance.get_node_or_null("HUD/MarginContainer/Panel/VBox/RegionLabel")
 	var enemies := get_nodes_in_group("enemies")
 	var interactables := get_nodes_in_group("interactables")
 
@@ -59,16 +69,25 @@ func _run_tests() -> void:
 		failures.append("QuestManager nao foi instanciado")
 	if eliabe == null:
 		failures.append("Eliabe nao foi instanciado")
-	if region == null:
+	if first_region == null:
 		failures.append("Primeira regiao nao foi instanciada")
-	elif region.get_node_or_null("Ground") == null:
+	elif first_region.get_node_or_null("Ground") == null:
 		failures.append("Primeira regiao nao construiu o terreno")
-	if quest_label == null:
-		failures.append("HUD nao possui QuestLabel")
+	if second_region == null:
+		failures.append("Vale das Fontes nao foi instanciado")
+	else:
+		if second_region.get_node_or_null("Ground") == null:
+			failures.append("Vale das Fontes nao construiu o terreno")
+		if second_region.get_node_or_null("ArrivalMarker") == null:
+			failures.append("Vale das Fontes nao possui ArrivalMarker")
+	if gate == null or return_gate == null:
+		failures.append("Passagens entre regioes nao foram instanciadas")
+	if quest_label == null or region_label == null:
+		failures.append("HUD nao possui labels essenciais")
 	if enemies.size() != 3:
 		failures.append("Esperados 3 inimigos, encontrados %d" % enemies.size())
-	if interactables.size() < 1:
-		failures.append("Nenhum interactable registrado")
+	if interactables.size() < 3:
+		failures.append("Esperados NPC + duas passagens como interactables")
 
 	if player != null:
 		_validate_visual_adapter(player, "jogador")
@@ -76,8 +95,8 @@ func _run_tests() -> void:
 	for enemy in enemies:
 		_validate_visual_adapter(enemy, enemy.get_display_name() if enemy.has_method("get_display_name") else enemy.name)
 
-	if player != null and quest_manager != null and enemies.size() == 3:
-		_test_quest_loop(player, quest_manager, enemies)
+	if player != null and quest_manager != null and gate != null and return_gate != null and enemies.size() == 3:
+		_test_world_progression(player, quest_manager, enemies, gate, return_gate)
 
 	main_instance.queue_free()
 	await process_frame
@@ -103,7 +122,15 @@ func _validate_visual_adapter(entity: Node, entity_label: String) -> void:
 	else:
 		print("ART OK %s: %s" % [entity_label, ", ".join(animations)])
 
-func _test_quest_loop(player: Node, quest_manager: Node, enemies: Array[Node]) -> void:
+func _test_world_progression(player: Node, quest_manager: Node, enemies: Array[Node], gate: Node, return_gate: Node) -> void:
+	var initial_position: Vector3 = player.global_position
+	if gate.has_method("is_unlocked") and gate.is_unlocked():
+		failures.append("Passagem iniciou desbloqueada antes da missao")
+
+	gate.interact(player)
+	if player.global_position.distance_to(initial_position) > 0.05:
+		failures.append("Passagem moveu o jogador antes da missao ser concluida")
+
 	quest_manager.interact_with_quest_giver()
 	if quest_manager.quest_state != 1:
 		failures.append("Missao nao entrou no estado ACTIVE")
@@ -121,6 +148,18 @@ func _test_quest_loop(player: Node, quest_manager: Node, enemies: Array[Node]) -
 		failures.append("Missao nao entrou no estado COMPLETED")
 	if player.level < 2:
 		failures.append("Recompensa da missao nao gerou progressao esperada")
+	if gate.has_method("is_unlocked") and not gate.is_unlocked():
+		failures.append("Passagem nao desbloqueou apos concluir a missao")
+
+	gate.interact(player)
+	var valley_spawn := Vector3(120.0, 1.15, 22.0)
+	if player.global_position.distance_to(valley_spawn) > 0.10:
+		failures.append("Jogador nao chegou ao Vale das Fontes")
+
+	return_gate.interact(player)
+	var ruins_return := Vector3(0.0, 1.15, -34.0)
+	if player.global_position.distance_to(ruins_return) > 0.10:
+		failures.append("Passagem de retorno nao levou o jogador as Ruinas Antigas")
 
 func _check_resource(path: String) -> void:
 	if load(path) == null:
@@ -128,7 +167,7 @@ func _check_resource(path: String) -> void:
 
 func _finish() -> void:
 	if failures.is_empty():
-		print("SMOKE TEST OK: gameplay, quest, modelos CC0 e animacoes validados.")
+		print("SMOKE TEST OK: gameplay, arte, combate, quest e transicao entre regioes validados.")
 		quit(0)
 		return
 
