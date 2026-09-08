@@ -16,25 +16,26 @@ O jogo já possui um vertical slice jogável em Godot 4.7.x com foco em hardware
 - números de dano flutuantes;
 - personagem e três inimigos com modelos/animações CC0;
 - NPC Eliabe e ciclo completo de missão;
-- primeira região redesenhada com cenário procedural leve;
-- passagem bloqueada por progresso de quest;
-- segunda área explorável: Vale das Fontes;
-- ida e volta entre regiões sem resetar o jogador;
-- smoke test headless validando gameplay, assets, missão e transição entre regiões.
+- duas regiões conectadas por progressão de quest;
+- inventário de 20 slots com empilhamento;
+- ouro;
+- tabela de loot por tipo de inimigo;
+- pickups no mundo coletados com E;
+- janela de inventário aberta com I;
+- feedback no HUD ao obter item ou ouro;
+- smoke test headless cobrindo gameplay, mundo, inventário e loot.
 
 ## Mundo atual
 
 ### Região 1 — Acampamento do Peregrino
 
-Fluxo:
-
 **Acampamento do Peregrino → Caminho dos Olivais → Ruínas Antigas**.
 
 Inimigos:
 
-1. **Espectro do Ermo** — rápido e fraco;
-2. **Esqueleto Saqueador** — dificuldade intermediária;
-3. **Demônio das Ruínas** — mais resistente e perigoso.
+1. **Espectro do Ermo** — pode derrubar Essência do Ermo e ouro;
+2. **Esqueleto Saqueador** — pode derrubar Fragmentos de Osso e ouro;
+3. **Demônio das Ruínas** — derruba Lasca das Ruínas e ouro.
 
 NPC:
 
@@ -48,15 +49,7 @@ Após entregar a missão, a passagem das Ruínas Antigas é desbloqueada.
 
 ### Região 2 — Vale das Fontes
 
-Primeira área de expansão do mundo. Atualmente funciona como zona segura de exploração com:
-
-- riacho;
-- ponte de pedra;
-- vegetação própria;
-- santuário da fonte;
-- passagem de retorno às Ruínas Antigas.
-
-Ela existe para validar crescimento regional mantendo estado do jogador no mesmo mundo.
+Zona segura de exploração com riacho, ponte de pedra, vegetação própria, santuário da fonte e passagem de retorno às Ruínas Antigas.
 
 ## Controles
 
@@ -65,9 +58,26 @@ Ela existe para validar crescimento regional mantendo estado do jogador no mesmo
 | Mover | WASD |
 | Selecionar inimigo próximo | TAB |
 | Atacar | ESPAÇO |
-| Interagir / falar / atravessar passagem | E |
+| Interagir / falar / coletar / atravessar passagem | E |
+| Inventário | I |
 | Girar câmera | botão direito + mouse |
 | Zoom | roda do mouse |
+
+## Arquitetura do inventário
+
+```text
+Enemy
+  ↓ loot_requested
+LootManager
+  ↓ LootTable
+WorldPickup
+  ↓ interact(player)
+Player/Inventory
+  ↓ signals
+HUD + InventoryPanel
+```
+
+A IA do inimigo nunca escreve diretamente no inventário. A UI também não decide regras de slots, stacks ou ouro.
 
 ## Estrutura
 
@@ -76,6 +86,7 @@ assets/
   third_party/quaternius/
 scenes/
   enemies/
+  loot/
   npcs/
   player/
   ui/
@@ -84,6 +95,8 @@ scripts/
   art/
   camera/
   enemies/
+  inventory/
+  loot/
   npcs/
   player/
   quests/
@@ -98,9 +111,7 @@ tests/
 
 ## Assets
 
-Os modelos animados atuais são de **Quaternius**, distribuídos em **CC0** e registrados em `assets/ATTRIBUTION.md` com origem e SHA-256.
-
-O ambiente continua majoritariamente procedural para manter download e custo de renderização baixos. Nenhum modelo, mapa, textura, som ou personagem extraído de Talisman Online ou de outro jogo comercial é usado.
+Os modelos animados atuais são de **Quaternius**, distribuídos em **CC0** e registrados em `assets/ATTRIBUTION.md` com origem e SHA-256. O ambiente continua majoritariamente procedural para manter download e custo de renderização baixos.
 
 ## Teste rápido
 
@@ -113,25 +124,15 @@ godot --headless --path . --import
 godot --headless --path . --script tests/smoke_test.gd
 ```
 
-O teste automatizado valida:
-
-1. cenas, scripts e inputs;
-2. importação dos quatro GLBs CC0;
-3. animações do jogador e inimigos;
-4. primeira e segunda regiões;
-5. Eliabe e os três inimigos;
-6. missão completa e recompensa;
-7. passagem trancada antes da missão;
-8. desbloqueio após conclusão;
-9. ida ao Vale das Fontes e retorno às Ruínas Antigas.
+O teste automatizado valida cenas, inputs, GLBs/animações, regiões, missão, passagem, stacks, ouro, gasto, remoção, pickups e loot garantido do Demônio das Ruínas.
 
 ## Próximo marco
 
-**RPG sistêmico — loot + inventário**:
+**Equipamentos + atributos + persistência local**:
 
-- drops por inimigo;
-- inventário desacoplado da UI;
-- itens comuns e equipamentos;
-- moeda do jogo;
-- feedback ao coletar loot;
-- preparação para loja/ferreiro e save local.
+- slots de arma e armadura;
+- bônus de ataque/vida derivados de equipamento;
+- itens equipáveis no catálogo;
+- interação da janela de inventário;
+- save local versionado;
+- preparação para ferreiro e loja.
