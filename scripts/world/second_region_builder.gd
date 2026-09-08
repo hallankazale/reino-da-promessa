@@ -9,6 +9,17 @@ const WOOD_COLOR := Color(0.31, 0.18, 0.08, 1.0)
 const LEAF_COLOR := Color(0.27, 0.49, 0.23, 1.0)
 const LEAF_LIGHT := Color(0.39, 0.60, 0.28, 1.0)
 
+# A ponte visual fica elevada para cruzar o riacho, mas CharacterBody3D nao sobe
+# degraus verticais sozinho. Mantemos uma colisao continua no tabuleiro e duas
+# rampas suaves nas extremidades para transformar a transicao em uma superficie
+# caminhavel, sem acoplar nenhuma regra especial ao Player.
+const BRIDGE_DECK_Y := 0.20
+const BRIDGE_DECK_THICKNESS := 0.34
+const BRIDGE_DECK_TOP_Y := BRIDGE_DECK_Y + BRIDGE_DECK_THICKNESS * 0.5
+const BRIDGE_HALF_LENGTH := 2.61
+const BRIDGE_RAMP_RUN := 1.70
+const BRIDGE_RAMP_THICKNESS := 0.18
+
 var _material_cache: Dictionary = {}
 
 func _ready() -> void:
@@ -46,10 +57,42 @@ func _build_bridge() -> void:
 	bridge.position = Vector3(0, 0, 1.5)
 	add_child(bridge)
 
-	for z in [-2.2, -1.45, -0.7, 0.05, 0.8, 1.55, 2.3]:
-		_add_box_to(bridge, "BridgeSlab", Vector3(0, 0.20, z), Vector3(4.2, 0.34, 0.72), STONE_COLOR, true)
+	# As placas sao somente apresentacao. Uma unica colisao sob o tabuleiro evita
+	# pequenas emendas entre slabs que podem prender a capsula do jogador.
+	for z in [-2.25, -1.50, -0.75, 0.0, 0.75, 1.50, 2.25]:
+		_add_box_to(bridge, "BridgeSlab", Vector3(0, BRIDGE_DECK_Y, z), Vector3(4.2, BRIDGE_DECK_THICKNESS, 0.72), STONE_COLOR, false)
+
+	_add_collision_box_to(
+		bridge,
+		"BridgeDeckCollision",
+		Vector3(0, BRIDGE_DECK_Y, 0),
+		Vector3(4.2, BRIDGE_DECK_THICKNESS, BRIDGE_HALF_LENGTH * 2.0)
+	)
+
+	_add_bridge_ramp(bridge, 1.0)
+	_add_bridge_ramp(bridge, -1.0)
+
 	_add_box_to(bridge, "RailLeft", Vector3(-2.05, 0.65, 0), Vector3(0.22, 0.85, 5.2), STONE_DARK, true)
 	_add_box_to(bridge, "RailRight", Vector3(2.05, 0.65, 0), Vector3(0.22, 0.85, 5.2), STONE_DARK, true)
+
+func _add_bridge_ramp(bridge: Node3D, side: float) -> void:
+	var rise := BRIDGE_DECK_TOP_Y
+	var angle := atan(rise / BRIDGE_RAMP_RUN)
+	var ramp_length := sqrt(BRIDGE_RAMP_RUN * BRIDGE_RAMP_RUN + rise * rise)
+	var center_z := side * (BRIDGE_HALF_LENGTH + BRIDGE_RAMP_RUN * 0.5)
+	# O topo externo toca Y=0; o topo interno encontra exatamente o tabuleiro.
+	var center_y := rise * 0.5 - BRIDGE_RAMP_THICKNESS * 0.5 * cos(angle)
+	var rotation_x := rad_to_deg(angle) * side
+
+	_add_rotated_box_to(
+		bridge,
+		"BridgeApproachRamp",
+		Vector3(0, center_y, center_z),
+		Vector3(4.2, BRIDGE_RAMP_THICKNESS, ramp_length),
+		STONE_COLOR,
+		Vector3(rotation_x, 0, 0),
+		true
+	)
 
 func _build_spring_sanctuary() -> void:
 	var sanctuary := Node3D.new()
@@ -162,6 +205,32 @@ func _add_box_to(parent: Node, name: String, position: Vector3, size: Vector3, c
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.name = name
 	mesh_instance.position = position
+	mesh_instance.mesh = _box_mesh(size)
+	mesh_instance.material_override = _material(color)
+	parent.add_child(mesh_instance)
+
+func _add_rotated_box_to(parent: Node, name: String, position: Vector3, size: Vector3, color: Color, rotation_degrees_value: Vector3, collision: bool) -> void:
+	if collision:
+		var body := StaticBody3D.new()
+		body.name = name
+		body.position = position
+		body.rotation_degrees = rotation_degrees_value
+		parent.add_child(body)
+		var mesh_instance := MeshInstance3D.new()
+		mesh_instance.mesh = _box_mesh(size)
+		mesh_instance.material_override = _material(color)
+		body.add_child(mesh_instance)
+		var collision_shape := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = size
+		collision_shape.shape = shape
+		body.add_child(collision_shape)
+		return
+
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = name
+	mesh_instance.position = position
+	mesh_instance.rotation_degrees = rotation_degrees_value
 	mesh_instance.mesh = _box_mesh(size)
 	mesh_instance.material_override = _material(color)
 	parent.add_child(mesh_instance)
