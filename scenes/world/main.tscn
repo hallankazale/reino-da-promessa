@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://cmku3jefj1gmb"]
+[gd_scene load_steps=17 format=3 uid="uid://cmku3jefj1gmb"]
 
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/enemy_base.tscn" id="2_enemy"]
@@ -6,6 +6,9 @@
 [ext_resource type="PackedScene" path="res://scenes/world/first_region.tscn" id="4_region"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/eliabe.tscn" id="5_eliabe"]
 [ext_resource type="Script" path="res://scripts/quests/quest_manager.gd" id="6_quests"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius/wasteland_specter.glb" id="7_specter"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius/skeleton_raider.glb" id="8_skeleton"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius/ruins_demon.glb" id="9_demon"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -72,11 +75,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 23)
 position = Vector3(-3.8, 0.95, 20.5)
 rotation_degrees = Vector3(0, 145, 0)
 
-[node name="DesertJackal" parent="." instance=ExtResource("2_enemy")]
+[node name="WastelandSpecter" parent="." instance=ExtResource("2_enemy")]
 position = Vector3(-1.4, 1, 7.0)
-display_name = "Chacal do Deserto"
-enemy_kind = "desert_jackal"
-body_color = Color(0.62, 0.46, 0.24, 1)
+display_name = "Espectro do Ermo"
+enemy_kind = "wasteland_specter"
+body_color = Color(0.36, 0.52, 0.62, 1)
+visual_scene = ExtResource("7_specter")
+visual_target_height = 1.38
+visual_feet_y = -0.7
 max_health = 20
 xp_reward = 8
 attack_damage = 4
@@ -86,11 +92,14 @@ aggro_range = 7.5
 move_speed = 2.8
 respawn_delay = 6.0
 
-[node name="ValleyRaider" parent="." instance=ExtResource("2_enemy")]
+[node name="SkeletonRaider" parent="." instance=ExtResource("2_enemy")]
 position = Vector3(1.8, 1, -8.0)
-display_name = "Saqueador do Vale"
-enemy_kind = "valley_raider"
-body_color = Color(0.48, 0.15, 0.12, 1)
+display_name = "Esqueleto Saqueador"
+enemy_kind = "skeleton_raider"
+body_color = Color(0.52, 0.46, 0.36, 1)
+visual_scene = ExtResource("8_skeleton")
+visual_target_height = 1.58
+visual_feet_y = -0.7
 max_health = 38
 xp_reward = 12
 attack_damage = 7
@@ -100,11 +109,14 @@ aggro_range = 9.0
 move_speed = 2.2
 respawn_delay = 7.0
 
-[node name="RuinGuardian" parent="." instance=ExtResource("2_enemy")]
+[node name="RuinsDemon" parent="." instance=ExtResource("2_enemy")]
 position = Vector3(0, 1, -28.0)
-display_name = "Guardiao das Ruinas"
-enemy_kind = "ruin_guardian"
-body_color = Color(0.25, 0.18, 0.32, 1)
+display_name = "Demonio das Ruinas"
+enemy_kind = "ruins_demon"
+body_color = Color(0.28, 0.12, 0.34, 1)
+visual_scene = ExtResource("9_demon")
+visual_target_height = 1.92
+visual_feet_y = -0.7
 max_health = 60
 xp_reward = 18
 attack_damage = 10
