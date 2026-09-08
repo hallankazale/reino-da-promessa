@@ -4,6 +4,8 @@ extends Node
 ## This layer never changes collisions, quests, combat or progression. It is safe
 ## to disable independently if profiling ever shows a cost on very weak GPUs.
 
+const KAYKIT_DECORATOR = preload("res://scripts/world/kaykit_decorator.gd")
+
 func _ready() -> void:
 	call_deferred("_apply_presentation")
 
@@ -16,6 +18,14 @@ func _apply_presentation() -> void:
 	if first_region != null:
 		_add_instanced_grass(first_region)
 		_add_instanced_pebbles(first_region)
+	_add_kaykit_dressing(scene_root)
+
+func _add_kaykit_dressing(scene_root: Node) -> void:
+	if scene_root.get_node_or_null("KayKitDecorator") != null:
+		return
+	var decorator := KAYKIT_DECORATOR.new()
+	decorator.name = "KayKitDecorator"
+	scene_root.add_child(decorator)
 
 func _hide_landmark_billboards(node: Node) -> void:
 	if node is Label3D:
