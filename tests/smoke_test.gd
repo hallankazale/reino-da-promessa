@@ -14,10 +14,15 @@ func _run_tests() -> void:
 		"res://scenes/npcs/eliabe.tscn",
 		"res://scripts/player/player_controller.gd",
 		"res://scripts/enemies/enemy_base.gd",
+		"res://scripts/art/model_adapter.gd",
 		"res://scripts/npcs/quest_giver.gd",
 		"res://scripts/quests/quest_manager.gd",
 		"res://scripts/world/first_region_builder.gd",
-		"res://scripts/ui/hud.gd"
+		"res://scripts/ui/hud.gd",
+		"res://assets/third_party/quaternius/pilgrim_guardian.glb",
+		"res://assets/third_party/quaternius/wasteland_specter.glb",
+		"res://assets/third_party/quaternius/skeleton_raider.glb",
+		"res://assets/third_party/quaternius/ruins_demon.glb"
 	]
 
 	for path in required_resources:
@@ -35,7 +40,8 @@ func _run_tests() -> void:
 	var main_instance := main_scene.instantiate()
 	root.add_child(main_instance)
 
-	# Permite que _ready e chamadas deferred conectem grupos e sinais.
+	# Permite que _ready, importacao de modelos e chamadas deferred conectem sinais.
+	await process_frame
 	await process_frame
 	await process_frame
 
@@ -64,12 +70,38 @@ func _run_tests() -> void:
 	if interactables.size() < 1:
 		failures.append("Nenhum interactable registrado")
 
+	if player != null:
+		_validate_visual_adapter(player, "jogador")
+
+	for enemy in enemies:
+		_validate_visual_adapter(enemy, enemy.get_display_name() if enemy.has_method("get_display_name") else enemy.name)
+
 	if player != null and quest_manager != null and enemies.size() == 3:
 		_test_quest_loop(player, quest_manager, enemies)
 
 	main_instance.queue_free()
 	await process_frame
 	_finish()
+
+func _validate_visual_adapter(entity: Node, entity_label: String) -> void:
+	var adapter := entity.get_node_or_null("VisualAdapter")
+	if adapter == null:
+		failures.append("%s nao possui VisualAdapter" % entity_label)
+		return
+
+	if not adapter.has_method("has_loaded_model") or not adapter.has_loaded_model():
+		failures.append("%s nao carregou o modelo 3D importado" % entity_label)
+		return
+
+	if not adapter.has_method("get_animation_names"):
+		failures.append("%s nao expoe lista de animacoes" % entity_label)
+		return
+
+	var animations: PackedStringArray = adapter.get_animation_names()
+	if animations.is_empty():
+		failures.append("%s carregou sem animacoes" % entity_label)
+	else:
+		print("ART OK %s: %s" % [entity_label, ", ".join(animations)])
 
 func _test_quest_loop(player: Node, quest_manager: Node, enemies: Array[Node]) -> void:
 	quest_manager.interact_with_quest_giver()
@@ -96,7 +128,7 @@ func _check_resource(path: String) -> void:
 
 func _finish() -> void:
 	if failures.is_empty():
-		print("SMOKE TEST OK: regiao, inimigos, NPC, interacao e ciclo de missao validados.")
+		print("SMOKE TEST OK: gameplay, quest, modelos CC0 e animacoes validados.")
 		quit(0)
 		return
 
