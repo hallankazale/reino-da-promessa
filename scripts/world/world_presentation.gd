@@ -5,6 +5,7 @@ extends Node
 ## to disable independently if profiling ever shows a cost on very weak GPUs.
 
 const KAYKIT_DECORATOR = preload("res://scripts/world/kaykit_decorator.gd")
+const FANTASY_ATMOSPHERE = preload("res://scripts/world/fantasy_atmosphere.gd")
 
 func _ready() -> void:
 	call_deferred("_apply_presentation")
@@ -19,6 +20,7 @@ func _apply_presentation() -> void:
 		_add_instanced_grass(first_region)
 		_add_instanced_pebbles(first_region)
 	_add_kaykit_dressing(scene_root)
+	_add_fantasy_atmosphere(scene_root)
 
 func _add_kaykit_dressing(scene_root: Node) -> void:
 	if scene_root.get_node_or_null("KayKitDecorator") != null:
@@ -26,6 +28,13 @@ func _add_kaykit_dressing(scene_root: Node) -> void:
 	var decorator := KAYKIT_DECORATOR.new()
 	decorator.name = "KayKitDecorator"
 	scene_root.add_child(decorator)
+
+func _add_fantasy_atmosphere(scene_root: Node) -> void:
+	if scene_root.get_node_or_null("FantasyAtmosphere") != null:
+		return
+	var atmosphere := FANTASY_ATMOSPHERE.new()
+	atmosphere.name = "FantasyAtmosphere"
+	scene_root.add_child(atmosphere)
 
 func _hide_landmark_billboards(node: Node) -> void:
 	if node is Label3D:
@@ -43,14 +52,14 @@ func _add_instanced_grass(region: Node3D) -> void:
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3(0.07, 0.55, 0.07)
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.24, 0.34, 0.16, 1.0)
+	material.albedo_color = Color(0.20, 0.31, 0.14, 1.0)
 	material.roughness = 1.0
 	mesh.material = material
 
 	var multimesh := MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.mesh = mesh
-	multimesh.instance_count = 88
+	multimesh.instance_count = 104
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20260908
@@ -59,7 +68,7 @@ func _add_instanced_grass(region: Node3D) -> void:
 		if absf(x) < 4.6:
 			x = (1.0 if x >= 0.0 else -1.0) * rng.randf_range(4.8, 15.5)
 		var z := rng.randf_range(-22.0, 30.0)
-		var scale_y := rng.randf_range(0.55, 1.25)
+		var scale_y := rng.randf_range(0.55, 1.35)
 		var scale_xz := rng.randf_range(0.65, 1.3)
 		var basis := Basis(Vector3.UP, rng.randf_range(0.0, TAU))
 		basis = basis.scaled(Vector3(scale_xz, scale_y, scale_xz))
@@ -80,20 +89,20 @@ func _add_instanced_pebbles(region: Node3D) -> void:
 	mesh.radial_segments = 6
 	mesh.rings = 3
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.36, 0.34, 0.30, 1.0)
+	material.albedo_color = Color(0.34, 0.32, 0.29, 1.0)
 	material.roughness = 1.0
 	mesh.material = material
 
 	var multimesh := MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.mesh = mesh
-	multimesh.instance_count = 34
+	multimesh.instance_count = 42
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 9082026
 	for index in range(multimesh.instance_count):
 		var side := -1.0 if index % 2 == 0 else 1.0
-		var x := side * rng.randf_range(3.2, 7.2)
+		var x := side * rng.randf_range(3.2, 7.6)
 		var z := rng.randf_range(-21.0, 24.0)
 		var scale := rng.randf_range(0.55, 1.35)
 		var basis := Basis(Vector3.UP, rng.randf_range(0.0, TAU))
