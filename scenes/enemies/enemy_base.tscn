@@ -39,6 +39,8 @@ albedo_color = Color(0.15, 0.82, 0.2, 1)
 
 [node name="EnemyBase" type="CharacterBody3D"]
 script = ExtResource("1_enemy")
+floor_snap_length = 0.5
+floor_max_angle = 0.785398
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("EnemyCollision")

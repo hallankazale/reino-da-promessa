@@ -302,3 +302,20 @@ theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 9
 text = "WASD mover   TAB alvo   ESPACO atacar   I inventario"
+
+[node name="BuildLabel" type="Label" parent="."]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -195.0
+offset_top = -22.0
+offset_right = -12.0
+offset_bottom = -6.0
+horizontal_alignment = 2
+theme_override_colors/font_color = Color(0.67, 0.73, 0.82, 0.62)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 8
+text = "build v0.9.1 • enemy-pipeline-v2"
