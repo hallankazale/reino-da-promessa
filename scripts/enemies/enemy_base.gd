@@ -241,6 +241,10 @@ func _configure_visual() -> void:
 	if bool(profile.get("ground_to_collider", true)):
 		_resolved_visual_feet_y = _collision_floor_y() + float(profile.get("feet_offset", 0.0))
 
+	var profile_move_tokens = profile.get("move_tokens", [])
+	if profile_move_tokens is Array and not profile_move_tokens.is_empty():
+		visual_adapter.set("move_tokens", PackedStringArray(profile_move_tokens))
+
 	visual_adapter.configure(
 		visual_scene,
 		visual_target_height,
