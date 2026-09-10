@@ -7,6 +7,7 @@ signal died
 signal respawned
 
 const DAMAGE_POPUP_SCENE: PackedScene = preload("res://scenes/ui/damage_popup.tscn")
+const ENEMY_VISUAL_PROFILES = preload("res://scripts/enemies/enemy_visual_profiles.gd")
 
 @export_category("Identity")
 @export var display_name: String = "Criatura Hostil"
@@ -41,6 +42,8 @@ var _is_alive: bool = true
 var _is_selected: bool = false
 var _health_ui_timer: float = 0.0
 var _spawn_transform: Transform3D
+var _resolved_visual_yaw: float = 0.0
+var _resolved_visual_feet_y: float = -0.7
 
 @onready var body: MeshInstance3D = $Body
 @onready var visual_adapter: Node = $VisualAdapter
@@ -119,6 +122,15 @@ func is_alive() -> bool:
 
 func get_display_name() -> String:
 	return display_name
+
+func get_resolved_visual_yaw() -> float:
+	return _resolved_visual_yaw
+
+func get_resolved_visual_feet_y() -> float:
+	return _resolved_visual_feet_y
+
+func get_collision_floor_y() -> float:
+	return _collision_floor_y()
 
 func _chase_target(target_position: Vector3) -> void:
 	var direction := target_position - global_position
@@ -219,12 +231,41 @@ func _respawn() -> void:
 func _configure_visual() -> void:
 	if visual_adapter == null or not visual_adapter.has_method("configure"):
 		return
+
+	var profile: Dictionary = ENEMY_VISUAL_PROFILES.get_profile(enemy_kind)
+	_resolved_visual_yaw = visual_yaw_degrees
+	if bool(profile.get("override_yaw", false)):
+		_resolved_visual_yaw = float(profile.get("yaw_degrees", visual_yaw_degrees))
+
+	_resolved_visual_feet_y = visual_feet_y
+	if bool(profile.get("ground_to_collider", true)):
+		_resolved_visual_feet_y = _collision_floor_y() + float(profile.get("feet_offset", 0.0))
+
 	visual_adapter.configure(
 		visual_scene,
 		visual_target_height,
-		visual_yaw_degrees,
-		visual_feet_y
+		_resolved_visual_yaw,
+		_resolved_visual_feet_y
 	)
+
+func _collision_floor_y() -> float:
+	if not is_instance_valid(collision_shape) or collision_shape.shape == null:
+		return visual_feet_y
+
+	var shape := collision_shape.shape
+	var half_height := 0.0
+	if shape is CapsuleShape3D:
+		half_height = (shape as CapsuleShape3D).height * 0.5
+	elif shape is CylinderShape3D:
+		half_height = (shape as CylinderShape3D).height * 0.5
+	elif shape is BoxShape3D:
+		half_height = (shape as BoxShape3D).size.y * 0.5
+	elif shape is SphereShape3D:
+		half_height = (shape as SphereShape3D).radius
+	else:
+		return visual_feet_y
+
+	return collision_shape.position.y - half_height
 
 func _apply_body_color() -> void:
 	var material := StandardMaterial3D.new()
@@ -264,7 +305,13 @@ func _spawn_damage_popup(amount: int, color: Color) -> void:
 	if not popup is Node3D:
 		popup.queue_free()
 		return
-	get_tree().current_scene.add_child(popup)
+	var scene_root := get_tree().current_scene
+	if scene_root == null:
+		scene_root = get_parent()
+	if scene_root == null:
+		popup.queue_free()
+		return
+	scene_root.add_child(popup)
 	(popup as Node3D).global_position = global_position + Vector3(0, 2.1, 0)
 	if popup.has_method("setup"):
 		popup.setup(amount, color)
