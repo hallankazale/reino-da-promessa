@@ -11,7 +11,11 @@ func _ready() -> void:
 	call_deferred("_apply_presentation")
 
 func _apply_presentation() -> void:
-	var scene_root := get_tree().current_scene
+	# WorldPresentation is owned by the scene root, so prefer the structural parent.
+	# This also works in headless tests where SceneTree.current_scene may be null.
+	var scene_root := get_parent()
+	if scene_root == null:
+		scene_root = get_tree().current_scene
 	if scene_root == null:
 		return
 	_hide_landmark_billboards(scene_root)
