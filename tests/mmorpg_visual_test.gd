@@ -24,7 +24,7 @@ func _run() -> void:
 	for _frame in range(8):
 		await process_frame
 
-	await _validate_all_enemy_visuals(main_instance)
+	_validate_all_enemy_visuals(main_instance)
 	_validate_presentation(main_instance)
 	_validate_hud(main_instance)
 
@@ -59,7 +59,7 @@ func _validate_all_enemy_visuals(main_instance: Node) -> void:
 		_validate_enemy_grounding(enemy, adapter)
 		_validate_enemy_facing(enemy, adapter)
 		if kind == "skeleton_raider":
-			await _validate_grounded_rogue_locomotion(enemy, adapter)
+			_validate_grounded_rogue_locomotion(adapter)
 
 func _validate_enemy_grounding(enemy: CharacterBody3D, adapter: Node3D) -> void:
 	if not enemy.has_method("get_collision_floor_y") or not enemy.has_method("get_resolved_visual_feet_y"):
@@ -99,19 +99,22 @@ func _validate_enemy_grounding(enemy: CharacterBody3D, adapter: Node3D) -> void:
 	if absf(bounds.position.y - resolved_feet) > 0.06:
 		failures.append("%s: fundo visual %.3f difere do pe resolvido %.3f" % [enemy.name, bounds.position.y, resolved_feet])
 
-func _validate_grounded_rogue_locomotion(enemy: CharacterBody3D, adapter: Node3D) -> void:
+func _validate_grounded_rogue_locomotion(adapter: Node3D) -> void:
 	if not adapter.has_method("play_move"):
 		failures.append("Saqueador sem locomocao no ModelAdapter")
 		return
-	adapter.call("play_move")
-	await process_frame
 	var animation_player := _find_animation_player(adapter)
 	if animation_player == null:
 		failures.append("Saqueador sem AnimationPlayer")
 		return
+
+	# AnimationPlayer.play changes current_animation immediately. Do not wait a
+	# frame here: with an idle physics body, auto_locomotion would correctly return
+	# to Idle and the test would measure the wrong state.
+	adapter.call("play_move")
 	var animation_name := String(animation_player.current_animation).to_lower()
 	if not animation_name.contains("walking"):
-		failures.append("Saqueador ainda usa locomocao aerea/rapida: %s" % animation_player.current_animation)
+		failures.append("Saqueador ainda seleciona locomocao inadequada: %s" % animation_player.current_animation)
 
 func _mesh_min_y_in_adapter_space(mesh_instance: MeshInstance3D, adapter: Node3D) -> float:
 	var box := mesh_instance.get_aabb()
