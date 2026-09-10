@@ -5,6 +5,7 @@ class_name EnemyVisualProfiles
 ## Gameplay code never needs to know asset-specific forward axes or foot offsets.
 
 const DEFAULT_PROFILE := {
+	"override_yaw": false,
 	"yaw_degrees": 0.0,
 	"ground_to_collider": true,
 	"feet_offset": 0.0,
@@ -12,22 +13,26 @@ const DEFAULT_PROFILE := {
 
 const PROFILES := {
 	"wasteland_specter": {
+		"override_yaw": true,
 		"yaw_degrees": 180.0,
 		"ground_to_collider": true,
 		"feet_offset": 0.0,
 	},
 	"spring_shade": {
+		"override_yaw": true,
 		"yaw_degrees": 180.0,
 		"ground_to_collider": true,
 		"feet_offset": 0.0,
 	},
 	"skeleton_raider": {
 		# Logical id kept for loot/quest compatibility; visual is KayKit Rogue_Hooded.
+		"override_yaw": true,
 		"yaw_degrees": 180.0,
 		"ground_to_collider": true,
 		"feet_offset": 0.0,
 	},
 	"ruins_demon": {
+		"override_yaw": true,
 		"yaw_degrees": 0.0,
 		"ground_to_collider": true,
 		"feet_offset": 0.0,
