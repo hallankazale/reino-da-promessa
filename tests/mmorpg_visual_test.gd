@@ -24,7 +24,7 @@ func _run() -> void:
 	for _frame in range(8):
 		await process_frame
 
-	_validate_all_enemy_visuals(main_instance)
+	await _validate_all_enemy_visuals(main_instance)
 	_validate_presentation(main_instance)
 	_validate_hud(main_instance)
 
@@ -58,6 +58,8 @@ func _validate_all_enemy_visuals(main_instance: Node) -> void:
 
 		_validate_enemy_grounding(enemy, adapter)
 		_validate_enemy_facing(enemy, adapter)
+		if kind == "skeleton_raider":
+			await _validate_grounded_rogue_locomotion(enemy, adapter)
 
 func _validate_enemy_grounding(enemy: CharacterBody3D, adapter: Node3D) -> void:
 	if not enemy.has_method("get_collision_floor_y") or not enemy.has_method("get_resolved_visual_feet_y"):
@@ -74,67 +76,71 @@ func _validate_enemy_grounding(enemy: CharacterBody3D, adapter: Node3D) -> void:
 		failures.append("%s caiu no fallback em vez do modelo importado" % enemy.name)
 		return
 
+	var kind := String(enemy.get("enemy_kind"))
+	if kind == "skeleton_raider":
+		# KayKit includes crossbows/weapons whose AABBs extend below the boots.
+		# Validate the actual leg meshes, not the combined asset bounds.
+		var left_leg := _find_mesh(imported_model, "Rogue_LegLeft")
+		var right_leg := _find_mesh(imported_model, "Rogue_LegRight")
+		if left_leg == null or right_leg == null:
+			failures.append("Saqueador sem meshes de pernas para validar grounding")
+			return
+		for leg in [left_leg, right_leg]:
+			var leg_min_y := _mesh_min_y_in_adapter_space(leg, adapter)
+			if absf(leg_min_y - resolved_feet) > 0.06:
+				failures.append("%s: sola visual %.3f difere do pe resolvido %.3f" % [leg.name, leg_min_y, resolved_feet])
+		return
+
 	var bounds_data: Dictionary = adapter.call("_calculate_bounds", imported_model)
 	if not bool(bounds_data.get("found", false)):
 		failures.append("%s sem bounds visuais para validar os pes" % enemy.name)
 		return
 	var bounds: AABB = bounds_data["bounds"]
+	if absf(bounds.position.y - resolved_feet) > 0.06:
+		failures.append("%s: fundo visual %.3f difere do pe resolvido %.3f" % [enemy.name, bounds.position.y, resolved_feet])
 
-	# Keep this diagnostic in CI: if a third-party humanoid changes its mesh/rig,
-	# the log tells us exactly why foot anchoring drifted.
-	if String(enemy.get("enemy_kind")) == "skeleton_raider":
-		_print_asset_rig_diagnostic(enemy, adapter, imported_model)
+func _validate_grounded_rogue_locomotion(enemy: CharacterBody3D, adapter: Node3D) -> void:
+	if not adapter.has_method("play_move"):
+		failures.append("Saqueador sem locomocao no ModelAdapter")
+		return
+	adapter.call("play_move")
+	await process_frame
+	var animation_player := _find_animation_player(adapter)
+	if animation_player == null:
+		failures.append("Saqueador sem AnimationPlayer")
+		return
+	var animation_name := String(animation_player.current_animation).to_lower()
+	if not animation_name.contains("walking"):
+		failures.append("Saqueador ainda usa locomocao aerea/rapida: %s" % animation_player.current_animation)
 
-	# Combined AABB is only a sanity check for non-humanoids. Humanoids can have
-	# weapons/accessories extending below the soles, so their final shipping check
-	# will use foot bones once the adapter exposes a bone-grounding API.
-	if String(enemy.get("enemy_kind")) != "skeleton_raider":
-		if absf(bounds.position.y - resolved_feet) > 0.06:
-			failures.append("%s: fundo visual %.3f difere do pe resolvido %.3f" % [enemy.name, bounds.position.y, resolved_feet])
+func _mesh_min_y_in_adapter_space(mesh_instance: MeshInstance3D, adapter: Node3D) -> float:
+	var box := mesh_instance.get_aabb()
+	var to_adapter := adapter.global_transform.affine_inverse() * mesh_instance.global_transform
+	var min_y := INF
+	for x in [0.0, 1.0]:
+		for y in [0.0, 1.0]:
+			for z in [0.0, 1.0]:
+				var p := box.position + Vector3(box.size.x * x, box.size.y * y, box.size.z * z)
+				min_y = minf(min_y, (to_adapter * p).y)
+	return min_y
 
-func _print_asset_rig_diagnostic(enemy: CharacterBody3D, adapter: Node3D, imported_model: Node3D) -> void:
-	print("RIG_DIAG_BEGIN %s" % enemy.name)
-	var meshes: Array[MeshInstance3D] = []
-	_collect_meshes(imported_model, meshes)
-	var adapter_inverse := adapter.global_transform.affine_inverse()
-	for mesh_instance in meshes:
-		if mesh_instance.mesh == null:
-			continue
-		var box := mesh_instance.get_aabb()
-		var to_adapter := adapter_inverse * mesh_instance.global_transform
-		var min_y := INF
-		var max_y := -INF
-		for x in [0.0, 1.0]:
-			for y in [0.0, 1.0]:
-				for z in [0.0, 1.0]:
-					var p := box.position + Vector3(box.size.x * x, box.size.y * y, box.size.z * z)
-					var q := to_adapter * p
-					min_y = minf(min_y, q.y)
-					max_y = maxf(max_y, q.y)
-		print("RIG_MESH %s minY=%.3f maxY=%.3f" % [mesh_instance.name, min_y, max_y])
-
-	var skeletons: Array[Skeleton3D] = []
-	_collect_skeletons(imported_model, skeletons)
-	for skeleton in skeletons:
-		print("RIG_SKELETON %s bones=%d" % [skeleton.name, skeleton.get_bone_count()])
-		for bone_index in range(skeleton.get_bone_count()):
-			var bone_name := String(skeleton.get_bone_name(bone_index))
-			var lower := bone_name.to_lower()
-			if lower.contains("foot") or lower.contains("ankle") or lower.contains("toe") or lower.contains("root") or lower.contains("hips"):
-				print("RIG_BONE %d %s parent=%d" % [bone_index, bone_name, skeleton.get_bone_parent(bone_index)])
-	print("RIG_DIAG_END %s" % enemy.name)
-
-func _collect_meshes(node: Node, output: Array[MeshInstance3D]) -> void:
-	if node is MeshInstance3D:
-		output.append(node as MeshInstance3D)
+func _find_mesh(node: Node, mesh_name: String) -> MeshInstance3D:
+	if node is MeshInstance3D and node.name == mesh_name:
+		return node as MeshInstance3D
 	for child in node.get_children():
-		_collect_meshes(child, output)
+		var found := _find_mesh(child, mesh_name)
+		if found != null:
+			return found
+	return null
 
-func _collect_skeletons(node: Node, output: Array[Skeleton3D]) -> void:
-	if node is Skeleton3D:
-		output.append(node as Skeleton3D)
+func _find_animation_player(node: Node) -> AnimationPlayer:
+	if node is AnimationPlayer:
+		return node as AnimationPlayer
 	for child in node.get_children():
-		_collect_skeletons(child, output)
+		var found := _find_animation_player(child)
+		if found != null:
+			return found
+	return null
 
 func _validate_enemy_facing(enemy: CharacterBody3D, adapter: Node3D) -> void:
 	if not enemy.has_method("_face_target"):
