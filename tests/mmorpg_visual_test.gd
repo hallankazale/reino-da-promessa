@@ -2,6 +2,14 @@ extends SceneTree
 
 var failures: Array[String] = []
 
+const ENEMY_CASES := [
+	{"node": "WastelandSpecter", "kind": "wasteland_specter", "yaw": 180.0},
+	{"node": "SkeletonRaider", "kind": "skeleton_raider", "yaw": 180.0},
+	{"node": "RuinsDemon", "kind": "ruins_demon", "yaw": 0.0},
+	{"node": "SpringShadeA", "kind": "spring_shade", "yaw": 180.0},
+	{"node": "SpringShadeB", "kind": "spring_shade", "yaw": 180.0},
+]
+
 func _initialize() -> void:
 	call_deferred("_run")
 
@@ -14,10 +22,10 @@ func _run() -> void:
 
 	var main_instance := main_scene.instantiate()
 	root.add_child(main_instance)
-	for _frame in range(6):
+	for _frame in range(8):
 		await process_frame
 
-	_validate_enemy_facing(main_instance)
+	_validate_enemy_visual_pipeline(main_instance)
 	_validate_presentation(main_instance)
 	_validate_hud(main_instance)
 
@@ -25,30 +33,52 @@ func _run() -> void:
 	await process_frame
 	_finish()
 
-func _validate_enemy_facing(main_instance: Node) -> void:
-	var enemy := main_instance.get_node_or_null("SkeletonRaider") as CharacterBody3D
-	if enemy == null:
-		failures.append("Saqueador Sombrio ausente")
-		return
-	var adapter := enemy.get_node_or_null("VisualAdapter") as Node3D
-	if adapter == null or not adapter.has_method("get_facing_yaw"):
-		failures.append("Saqueador sem ModelAdapter de facing")
-		return
+func _validate_enemy_visual_pipeline(main_instance: Node) -> void:
+	for test_case in ENEMY_CASES:
+		var node_name := String(test_case["node"])
+		var enemy := main_instance.get_node_or_null(node_name) as CharacterBody3D
+		if enemy == null:
+			failures.append("Inimigo ausente: %s" % node_name)
+			continue
 
-	var body_yaw_before := enemy.rotation.y
-	var target := enemy.global_position + Vector3(0.0, 0.0, 5.0)
-	if enemy.has_method("_face_target"):
-		enemy.call("_face_target", target, 1.0)
-	else:
-		failures.append("EnemyBase nao expoe _face_target")
-		return
+		var adapter := enemy.get_node_or_null("VisualAdapter") as Node3D
+		if adapter == null or not adapter.has_method("get_facing_yaw"):
+			failures.append("%s sem ModelAdapter de facing" % node_name)
+			continue
 
-	if absf(enemy.rotation.y - body_yaw_before) > 0.0001:
-		failures.append("Facing do inimigo ainda gira o CharacterBody3D")
+		# Grounding is now profile-driven and tied to the actual collision bottom.
+		if not enemy.has_method("get_resolved_visual_feet_y") or not enemy.has_method("get_collision_floor_y"):
+			failures.append("%s nao expoe grounding visual resolvido" % node_name)
+		else:
+			var feet_y := float(enemy.call("get_resolved_visual_feet_y"))
+			var collider_floor_y := float(enemy.call("get_collision_floor_y"))
+			if absf(feet_y - collider_floor_y) > 0.001:
+				failures.append("%s nao esta ancorado ao fundo do collider" % node_name)
 
-	var visual_yaw: float = adapter.get_facing_yaw()
-	if absf(absf(visual_yaw) - PI) > 0.02:
-		failures.append("Saqueador nao orientou o visual para alvo em +Z")
+		# Known imported packs must resolve their forward-axis correction centrally.
+		if not enemy.has_method("get_resolved_visual_yaw"):
+			failures.append("%s nao expoe yaw visual resolvido" % node_name)
+		else:
+			var resolved_yaw := float(enemy.call("get_resolved_visual_yaw"))
+			var expected_yaw := float(test_case["yaw"])
+			if absf(wrapf(resolved_yaw - expected_yaw, -180.0, 180.0)) > 0.01:
+				failures.append("%s usa yaw %.1f; esperado %.1f" % [node_name, resolved_yaw, expected_yaw])
+
+		# Facing must rotate only presentation, never the physics body.
+		var body_yaw_before := enemy.rotation.y
+		var target := enemy.global_position + Vector3(0.0, 0.0, 5.0)
+		if enemy.has_method("_face_target"):
+			enemy.call("_face_target", target, 1.0)
+		else:
+			failures.append("%s nao expoe _face_target" % node_name)
+			continue
+
+		if absf(enemy.rotation.y - body_yaw_before) > 0.0001:
+			failures.append("%s ainda gira o CharacterBody3D para mirar" % node_name)
+
+		var visual_yaw: float = adapter.get_facing_yaw()
+		if absf(absf(visual_yaw) - PI) > 0.02:
+			failures.append("%s nao orientou o VisualAdapter para alvo em +Z" % node_name)
 
 func _validate_presentation(main_instance: Node) -> void:
 	var atmosphere := main_instance.get_node_or_null("FantasyAtmosphere")
