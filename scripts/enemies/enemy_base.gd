@@ -141,12 +141,23 @@ func _apply_gravity(delta: float) -> void:
 	else:
 		velocity.y -= gravity_force * delta
 
+## Facing is presentation-only. The physics body stays orientation-neutral so a
+## capsule collider can never fight the imported rig orientation. ModelAdapter
+## owns the visual forward convention and each asset's yaw correction.
 func _face_target(target_position: Vector3, delta: float) -> void:
 	var direction := target_position - global_position
 	direction.y = 0.0
 	if direction.length_squared() <= 0.001:
 		return
-	var target_angle := atan2(direction.x, direction.z)
+	direction = direction.normalized()
+
+	if visual_adapter != null and visual_adapter.has_method("face_direction"):
+		visual_adapter.face_direction(direction, delta, turn_speed)
+		return
+
+	# Safe fallback for an enemy scene without ModelAdapter. Godot gameplay
+	# convention is -Z forward, matching the player controller.
+	var target_angle := atan2(-direction.x, -direction.z)
 	rotation.y = lerp_angle(rotation.y, target_angle, minf(turn_speed * delta, 1.0))
 
 func _try_attack(player: Node) -> void:
@@ -240,23 +251,20 @@ func _set_health_ui_visible(is_visible: bool) -> void:
 		health_bar.visible = is_visible
 
 func _update_health_ui() -> void:
-	var health_ratio := 0.0
-	if max_health > 0:
-		health_ratio = float(current_health) / float(max_health)
-
+	var denominator := maxf(float(max_health), 1.0)
+	var ratio := clampf(float(current_health) / denominator, 0.0, 1.0)
 	health_label.text = "HP %d/%d" % [current_health, max_health]
-	health_fill.scale.x = maxf(health_ratio, 0.001)
-	health_fill.position.x = -0.59 * (1.0 - health_ratio)
+	health_fill.scale.x = maxf(ratio, 0.001)
+	health_fill.position.x = -0.5 * (1.0 - ratio)
 
-func _spawn_damage_popup(amount: int, tint: Color) -> void:
+func _spawn_damage_popup(amount: int, color: Color) -> void:
+	if DAMAGE_POPUP_SCENE == null:
+		return
 	var popup := DAMAGE_POPUP_SCENE.instantiate()
 	if not popup is Node3D:
 		popup.queue_free()
 		return
-	var parent_node: Node = get_tree().current_scene
-	if parent_node == null:
-		parent_node = get_parent()
-	parent_node.add_child(popup)
-	(popup as Node3D).global_position = global_position + Vector3(0, 1.8, 0)
-	if popup.has_method("show_value"):
-		popup.show_value(amount, tint)
+	get_tree().current_scene.add_child(popup)
+	(popup as Node3D).global_position = global_position + Vector3(0, 2.1, 0)
+	if popup.has_method("setup"):
+		popup.setup(amount, color)
