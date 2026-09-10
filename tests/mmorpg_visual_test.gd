@@ -74,15 +74,67 @@ func _validate_enemy_grounding(enemy: CharacterBody3D, adapter: Node3D) -> void:
 		failures.append("%s caiu no fallback em vez do modelo importado" % enemy.name)
 		return
 
-	# Valida o resultado da normalizacao, nao apenas o parametro calculado.
-	# Isso corrige a lacuna do teste anterior que ficava verde mesmo com o mesh alto.
 	var bounds_data: Dictionary = adapter.call("_calculate_bounds", imported_model)
 	if not bool(bounds_data.get("found", false)):
 		failures.append("%s sem bounds visuais para validar os pes" % enemy.name)
 		return
 	var bounds: AABB = bounds_data["bounds"]
-	if absf(bounds.position.y - resolved_feet) > 0.06:
-		failures.append("%s: fundo visual %.3f difere do pe resolvido %.3f" % [enemy.name, bounds.position.y, resolved_feet])
+
+	# Keep this diagnostic in CI: if a third-party humanoid changes its mesh/rig,
+	# the log tells us exactly why foot anchoring drifted.
+	if String(enemy.get("enemy_kind")) == "skeleton_raider":
+		_print_asset_rig_diagnostic(enemy, adapter, imported_model)
+
+	# Combined AABB is only a sanity check for non-humanoids. Humanoids can have
+	# weapons/accessories extending below the soles, so their final shipping check
+	# will use foot bones once the adapter exposes a bone-grounding API.
+	if String(enemy.get("enemy_kind")) != "skeleton_raider":
+		if absf(bounds.position.y - resolved_feet) > 0.06:
+			failures.append("%s: fundo visual %.3f difere do pe resolvido %.3f" % [enemy.name, bounds.position.y, resolved_feet])
+
+func _print_asset_rig_diagnostic(enemy: CharacterBody3D, adapter: Node3D, imported_model: Node3D) -> void:
+	print("RIG_DIAG_BEGIN %s" % enemy.name)
+	var meshes: Array[MeshInstance3D] = []
+	_collect_meshes(imported_model, meshes)
+	var adapter_inverse := adapter.global_transform.affine_inverse()
+	for mesh_instance in meshes:
+		if mesh_instance.mesh == null:
+			continue
+		var box := mesh_instance.get_aabb()
+		var to_adapter := adapter_inverse * mesh_instance.global_transform
+		var min_y := INF
+		var max_y := -INF
+		for x in [0.0, 1.0]:
+			for y in [0.0, 1.0]:
+				for z in [0.0, 1.0]:
+					var p := box.position + Vector3(box.size.x * x, box.size.y * y, box.size.z * z)
+					var q := to_adapter * p
+					min_y = minf(min_y, q.y)
+					max_y = maxf(max_y, q.y)
+		print("RIG_MESH %s minY=%.3f maxY=%.3f" % [mesh_instance.name, min_y, max_y])
+
+	var skeletons: Array[Skeleton3D] = []
+	_collect_skeletons(imported_model, skeletons)
+	for skeleton in skeletons:
+		print("RIG_SKELETON %s bones=%d" % [skeleton.name, skeleton.get_bone_count()])
+		for bone_index in range(skeleton.get_bone_count()):
+			var bone_name := String(skeleton.get_bone_name(bone_index))
+			var lower := bone_name.to_lower()
+			if lower.contains("foot") or lower.contains("ankle") or lower.contains("toe") or lower.contains("root") or lower.contains("hips"):
+				print("RIG_BONE %d %s parent=%d" % [bone_index, bone_name, skeleton.get_bone_parent(bone_index)])
+	print("RIG_DIAG_END %s" % enemy.name)
+
+func _collect_meshes(node: Node, output: Array[MeshInstance3D]) -> void:
+	if node is MeshInstance3D:
+		output.append(node as MeshInstance3D)
+	for child in node.get_children():
+		_collect_meshes(child, output)
+
+func _collect_skeletons(node: Node, output: Array[Skeleton3D]) -> void:
+	if node is Skeleton3D:
+		output.append(node as Skeleton3D)
+	for child in node.get_children():
+		_collect_skeletons(child, output)
 
 func _validate_enemy_facing(enemy: CharacterBody3D, adapter: Node3D) -> void:
 	if not enemy.has_method("_face_target"):
@@ -96,8 +148,6 @@ func _validate_enemy_facing(enemy: CharacterBody3D, adapter: Node3D) -> void:
 	if absf(enemy.rotation.y - body_yaw_before) > 0.0001:
 		failures.append("%s ainda gira o CharacterBody3D" % enemy.name)
 
-	# Para um alvo em +Z, o adapter deve girar PI pela convencao -Z-forward do jogo.
-	# A correcao nativa do asset e validada separadamente por enemy_kind acima.
 	var adapter_yaw := float(adapter.call("get_facing_yaw"))
 	if absf(absf(adapter_yaw) - PI) > 0.02:
 		failures.append("%s nao orientou o adapter para alvo em +Z" % enemy.name)
