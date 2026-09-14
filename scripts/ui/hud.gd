@@ -30,11 +30,13 @@ const ITEM_CATALOG = preload("res://scripts/inventory/item_catalog.gd")
 @onready var prompt_panel: Control = $PromptPanel
 @onready var prompt_label: Label = $PromptPanel/Panel/Label
 @onready var help_label: Label = $HelpLabel
+@onready var build_label: Label = $BuildLabel
 
 var _current_target: Node = null
 var _region_tween: Tween
 var _toast_tween: Tween
 var _quest_tween: Tween
+var _target_tween: Tween
 
 func _ready() -> void:
 	_apply_visual_polish()
@@ -85,6 +87,10 @@ func _apply_visual_polish() -> void:
 	help_label.add_theme_constant_override("shadow_offset_y", 1)
 	help_label.add_theme_font_size_override("font_size", 9)
 
+	# Marcador discreto para confirmar que o PC carregou esta revisao visual.
+	build_label.text = "build v0.10.0 • fantasy-pass-v2"
+	build_label.add_theme_color_override("font_color", Color(0.72, 0.78, 0.90, 0.55))
+
 func _process(_delta: float) -> void:
 	_update_interaction_prompt()
 
@@ -129,8 +135,14 @@ func _on_target_changed(target: Node3D) -> void:
 		return
 
 	target_panel.visible = true
+	target_panel.modulate.a = 0.0
 	target_name.text = target.get_display_name() if target.has_method("get_display_name") else target.name
 	_update_target_health_from_node(target)
+
+	if _target_tween != null and _target_tween.is_valid():
+		_target_tween.kill()
+	_target_tween = create_tween()
+	_target_tween.tween_property(target_panel, "modulate:a", 1.0, 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 	if target.has_signal("health_changed"):
 		target.health_changed.connect(_on_target_health_changed)
