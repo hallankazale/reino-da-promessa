@@ -27,6 +27,7 @@ func _run() -> void:
 	_validate_all_enemy_visuals(main_instance)
 	_validate_presentation(main_instance)
 	_validate_hud(main_instance)
+	_validate_damage_popup()
 
 	main_instance.queue_free()
 	await process_frame
@@ -78,8 +79,6 @@ func _validate_enemy_grounding(enemy: CharacterBody3D, adapter: Node3D) -> void:
 
 	var kind := String(enemy.get("enemy_kind"))
 	if kind == "skeleton_raider":
-		# KayKit includes crossbows/weapons whose AABBs extend below the boots.
-		# Validate the actual leg meshes, not the combined asset bounds.
 		var left_leg := _find_mesh(imported_model, "Rogue_LegLeft")
 		var right_leg := _find_mesh(imported_model, "Rogue_LegRight")
 		if left_leg == null or right_leg == null:
@@ -108,9 +107,6 @@ func _validate_grounded_rogue_locomotion(adapter: Node3D) -> void:
 		failures.append("Saqueador sem AnimationPlayer")
 		return
 
-	# AnimationPlayer.play changes current_animation immediately. Do not wait a
-	# frame here: with an idle physics body, auto_locomotion would correctly return
-	# to Idle and the test would measure the wrong state.
 	adapter.call("play_move")
 	var animation_name := String(animation_player.current_animation).to_lower()
 	if not animation_name.contains("walking"):
@@ -166,7 +162,11 @@ func _validate_presentation(main_instance: Node) -> void:
 	if atmosphere == null:
 		failures.append("FantasyAtmosphere nao foi instanciado")
 		return
-	for required_name in ["RuinsRuneOuter", "RuinsAura", "ValleyRuneOuter", "ValleyAura", "CampWarmth"]:
+	for required_name in [
+		"RuinsRuneOuter", "RuinsAura", "ValleyRuneOuter", "ValleyAura", "CampWarmth",
+		"CampWardLeft", "CampWardRight", "RuinsBeaconLeft", "RuinsBeaconRight",
+		"ValleyBeaconLeft", "ValleyBeaconRight", "RuinsWispA", "ValleyWispA", "PathSigilC"
+	]:
 		if atmosphere.get_node_or_null(required_name) == null:
 			failures.append("Elemento visual ausente: %s" % required_name)
 
@@ -180,8 +180,18 @@ func _validate_hud(main_instance: Node) -> void:
 	var build_label := hud.get_node_or_null("BuildLabel") as Label
 	if player_panel == null or quest_panel == null:
 		failures.append("Estrutura do HUD fantasy incompleta")
-	if build_label == null or not build_label.text.contains("v0.9.1"):
-		failures.append("Identificador de build v0.9.1 ausente")
+	if build_label == null or not build_label.text.contains("v0.10.0"):
+		failures.append("Identificador de build v0.10.0 ausente")
+
+func _validate_damage_popup() -> void:
+	var popup_scene: PackedScene = load("res://scenes/ui/damage_popup.tscn")
+	if popup_scene == null:
+		failures.append("Cena de dano nao carregou")
+		return
+	var popup := popup_scene.instantiate()
+	if not popup.has_method("setup"):
+		failures.append("DamagePopup nao expoe setup() usado pelo combate")
+	popup.queue_free()
 
 func _finish() -> void:
 	if failures.is_empty():
