@@ -44,6 +44,7 @@ var _health_ui_timer: float = 0.0
 var _spawn_transform: Transform3D
 var _resolved_visual_yaw: float = 0.0
 var _resolved_visual_feet_y: float = -0.7
+var _selection_fx_time: float = 0.0
 
 @onready var body: MeshInstance3D = $Body
 @onready var visual_adapter: Node = $VisualAdapter
@@ -67,6 +68,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_health_ui_visibility(delta)
+	_update_selection_fx(delta)
 	if not _is_alive:
 		return
 
@@ -115,6 +117,8 @@ func take_damage(amount: int, attacker: Node = null) -> void:
 func set_selected(is_selected: bool) -> void:
 	_is_selected = is_selected and _is_alive
 	selection_marker.visible = _is_selected
+	_selection_fx_time = 0.0
+	selection_marker.scale = Vector3.ONE
 	_set_health_ui_visible(_is_selected or _health_ui_timer > 0.0)
 
 func is_alive() -> bool:
@@ -167,8 +171,6 @@ func _face_target(target_position: Vector3, delta: float) -> void:
 		visual_adapter.face_direction(direction, delta, turn_speed)
 		return
 
-	# Safe fallback for an enemy scene without ModelAdapter. Godot gameplay
-	# convention is -Z forward, matching the player controller.
 	var target_angle := atan2(-direction.x, -direction.z)
 	rotation.y = lerp_angle(rotation.y, target_angle, minf(turn_speed * delta, 1.0))
 
@@ -190,6 +192,7 @@ func _die(attacker: Node) -> void:
 	_health_ui_timer = 0.0
 	velocity = Vector3.ZERO
 	selection_marker.visible = false
+	selection_marker.scale = Vector3.ONE
 	_set_health_ui_visible(false)
 	collision_shape.set_deferred("disabled", true)
 	if visual_adapter != null and visual_adapter.has_method("play_death"):
@@ -220,6 +223,7 @@ func _respawn() -> void:
 	_is_alive = true
 	visible = true
 	selection_marker.visible = false
+	selection_marker.scale = Vector3.ONE
 	_set_health_ui_visible(false)
 	collision_shape.set_deferred("disabled", false)
 	if visual_adapter != null and visual_adapter.has_method("reset_state"):
@@ -276,6 +280,14 @@ func _apply_body_color() -> void:
 	material.albedo_color = body_color
 	material.roughness = 0.95
 	body.material_override = material
+
+func _update_selection_fx(delta: float) -> void:
+	if not _is_selected or not selection_marker.visible:
+		return
+	_selection_fx_time += delta
+	var pulse := 1.0 + sin(_selection_fx_time * 5.2) * 0.10
+	selection_marker.scale = Vector3(pulse, 1.0, pulse)
+	selection_marker.rotation.y += delta * 1.7
 
 func _update_health_ui_visibility(delta: float) -> void:
 	if _is_selected:
